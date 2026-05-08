@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const MODEL = "gemini-3-flash";
+const MODEL = "gemini-2.5-flash";
 
 function getGeminiApiKey(): string | undefined {
   const raw =
