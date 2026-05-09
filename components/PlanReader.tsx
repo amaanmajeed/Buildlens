@@ -4,6 +4,8 @@ import { useCallback, useRef, useState } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
 import { MSG } from "@/lib/messages";
 import type { PlanQuantityRow } from "@/lib/types";
+import { Icon } from "@/components/ui/Icon";
+import { useWorkspaceState } from "@/components/workspace/WorkspaceStateProvider";
 import { Spinner } from "./Spinner";
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -21,17 +23,14 @@ type LocalRow = PlanQuantityRow & { id: string };
 function confidenceClass(c: string) {
   const v = c.toLowerCase();
   if (v === "high")
-    return "bg-[#22C55E]/15 text-[#166534] ring-1 ring-[#22C55E]/40";
+    return "bg-emerald-50 text-green-900 ring-1 ring-emerald-300";
   if (v === "medium")
-    return "bg-amber-50 text-amber-900 ring-1 ring-[#F59E0B]/50";
-  return "bg-red-50 text-red-800 ring-1 ring-[#EF4444]/40";
+    return "bg-amber-50 text-amber-900 ring-1 ring-amber-400";
+  return "bg-red-50 text-red-800 ring-1 ring-red-400";
 }
 
-type Props = {
-  onSendToEstimate: (rows: { item: string; quantity: number; unit: string }[]) => void;
-};
-
-export function PlanReader({ onSendToEstimate }: Props) {
+export function PlanReader() {
+  const { appendFromPlan } = useWorkspaceState();
   const fileInput = useRef<HTMLInputElement>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState("");
@@ -122,7 +121,7 @@ export function PlanReader({ onSendToEstimate }: Props) {
 
   const sendToEstimate = () => {
     if (rows.length === 0) return;
-    onSendToEstimate(
+    appendFromPlan(
       rows.map((r) => ({
         item: r.item,
         quantity: r.quantity,
@@ -132,159 +131,190 @@ export function PlanReader({ onSendToEstimate }: Props) {
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-[#1E3A5F]">
-        2. Plan Reader
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Upload a drawing sheet, choose a plan type, and extract quantities for
-        takeoff review.
-      </p>
-
-      {banner ? (
-        <p
-          className={`mt-4 rounded-md px-3 py-2 text-sm ${
-            banner === MSG.noQuantities
-              ? "bg-amber-50 text-amber-900"
-              : "bg-red-50 text-[#EF4444]"
-          }`}
-        >
-          {banner}
-        </p>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap items-end gap-4">
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="hidden"
-          onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
-        />
-        <button
-          type="button"
-          onClick={pickFile}
-          className="rounded-md bg-[#1E3A5F] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          Upload plan PDF
-        </button>
-        {fileLabel ? (
-          <span className="text-sm text-slate-700">{fileLabel}</span>
-        ) : null}
-
-        <label className="flex flex-col text-xs font-medium text-slate-600">
-          Plan type
-          <select
-            value={planType}
-            onChange={(e) =>
-              setPlanType(e.target.value as (typeof PLAN_TYPES)[number])
-            }
-            className="mt-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-          >
-            {PLAN_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button
-          type="button"
-          onClick={() => void extract()}
-          disabled={loading || !pdfBase64}
-          className="rounded-md bg-[#1E3A5F] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Extract quantities
-        </button>
-        {loading ? <Spinner label="Analyzing drawing…" /> : null}
-      </div>
-
-      <div className="mt-6 overflow-x-auto rounded-md border border-slate-200">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100 text-slate-700">
-            <tr>
-              <th className="px-3 py-2 font-medium">Item</th>
-              <th className="px-3 py-2 font-medium">Quantity</th>
-              <th className="px-3 py-2 font-medium">Unit</th>
-              <th className="px-3 py-2 font-medium">Confidence</th>
-              <th className="px-3 py-2 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-3 py-8 text-center text-slate-500"
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col overflow-hidden md:flex-row">
+      <section className="flex min-h-[40vh] w-full flex-[0_0_auto] flex-col border-b border-outline-variant bg-white md:w-[65%] md:max-w-[65%] md:flex-initial md:border-b-0 md:border-r">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4">
+          <div className="flex min-w-0 items-center gap-stack-sm overflow-hidden">
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
+              {fileLabel
+                ? `Sheet: ${fileLabel}`
+                : "Sheet — upload plan PDF"}
+            </span>
+            <div className="flex shrink-0 overflow-hidden rounded-lg border border-outline-variant bg-white shadow-sm">
+              <button
+                type="button"
+                className="border-r border-outline-variant px-2.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-variant"
+                aria-label="Zoom in"
+              >
+                <Icon name="zoom_in" size="sm" />
+              </button>
+              <button
+                type="button"
+                className="px-2.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-variant"
+                aria-label="Zoom out"
+              >
+                <Icon name="zoom_out" size="sm" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="blueprint-canvas flex min-h-[200px] flex-1 flex-col items-center justify-center gap-6 p-margin-mobile md:p-8">
+          {banner ? (
+            <div
+              className={`mx-auto max-w-md rounded-lg border px-4 py-3 text-sm ${
+                banner === MSG.noQuantities
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-error/30 bg-error-container/40 text-error"
+              }`}
+            >
+              {banner}
+            </div>
+          ) : null}
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+          />
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-center text-sm text-on-surface-variant">
+              Upload drawing sheet PDF and extract quantities for takeoff
+              review.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={pickFile}
+                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92]"
+              >
+                Upload plan PDF
+              </button>
+              <label className="flex items-center gap-2 text-sm font-medium text-on-surface-variant">
+                Type
+                <select
+                  value={planType}
+                  onChange={(e) =>
+                    setPlanType(e.target.value as (typeof PLAN_TYPES)[number])
+                  }
+                  className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
-                  {loading
-                    ? " "
-                    : "Extract quantities to see line items here."}
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2 text-slate-800">{r.item}</td>
-                  <td className="px-3 py-2">
-                    {editingId === r.id ? (
-                      <input
-                        type="number"
-                        className="w-28 rounded border border-slate-300 px-2 py-1 text-slate-900"
-                        value={r.quantity}
-                        onChange={(e) =>
-                          updateQuantity(
-                            r.id,
-                            Number.parseFloat(e.target.value) || 0
-                          )
-                        }
-                        onBlur={() => setEditingId(null)}
-                        autoFocus
-                      />
-                    ) : (
-                      <span className="text-slate-800">{r.quantity}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-slate-800">{r.unit}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${confidenceClass(r.confidence)}`}
-                    >
-                      {r.confidence}
-                    </span>
-                    {r.notes ? (
-                      <span className="ml-2 text-xs text-slate-500">
-                        {r.notes}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="text-sm font-medium text-[#1E3A5F] hover:underline"
-                      onClick={() => setEditingId(r.id)}
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  {PLAN_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => void extract()}
+                disabled={loading || !pdfBase64}
+                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92] disabled:opacity-50"
+              >
+                Extract quantities
+              </button>
+            </div>
+            {loading ? <Spinner label="Analyzing drawing…" /> : null}
+          </div>
+        </div>
+      </section>
 
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={sendToEstimate}
-          disabled={rows.length === 0}
-          className="rounded-md bg-[#1E3A5F] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Send to estimate
-        </button>
-      </div>
-    </section>
+      <section className="flex min-h-[40vh] flex-1 flex-col overflow-hidden bg-surface-container-low">
+        <header className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
+          <h2 className="text-lg font-semibold tracking-tight text-primary">
+            Quantity review
+          </h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Edit quantities, then push to Estimate Draft.
+          </p>
+        </header>
+        <div className="min-h-0 flex-1 overflow-auto p-margin-mobile pb-8 md:p-margin-desktop">
+          <div className="shadow-buildlens overflow-hidden rounded-lg border border-outline-variant bg-white">
+            <table className="min-w-full text-left text-sm">
+              <thead className="sticky top-0 z-[1] border-b border-outline-variant bg-surface-container-low">
+                <tr className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                  <th className="px-4 py-3">Item</th>
+                  <th className="px-4 py-3">Quantity</th>
+                  <th className="px-4 py-3">Unit</th>
+                  <th className="px-4 py-3">Confidence</th>
+                  <th className="px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {rows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-10 text-center text-on-surface-variant"
+                    >
+                      {loading ? " " : "Extract quantities to see line items."}
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r, i) => (
+                    <tr
+                      key={r.id}
+                      className={i % 2 === 1 ? "bg-primary/[0.02]" : ""}
+                    >
+                      <td className="px-4 py-3 text-on-surface">{r.item}</td>
+                      <td className="px-4 py-3 font-mono text-on-surface">
+                        {editingId === r.id ? (
+                          <input
+                            type="number"
+                            className="w-28 rounded border border-outline-variant px-2 py-1"
+                            value={r.quantity}
+                            onChange={(e) =>
+                              updateQuantity(
+                                r.id,
+                                Number.parseFloat(e.target.value) || 0
+                              )
+                            }
+                            onBlur={() => setEditingId(null)}
+                            autoFocus
+                          />
+                        ) : (
+                          r.quantity
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{r.unit}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${confidenceClass(r.confidence)}`}
+                        >
+                          {r.confidence}
+                        </span>
+                        {r.notes ? (
+                          <span className="ml-2 text-xs text-on-surface-variant">
+                            {r.notes}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary hover:underline"
+                          onClick={() => setEditingId(r.id)}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <button
+            type="button"
+            onClick={sendToEstimate}
+            disabled={rows.length === 0}
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-40 md:w-auto"
+          >
+            Send to estimate draft
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }

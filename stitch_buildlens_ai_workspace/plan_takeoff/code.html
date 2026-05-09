@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Plan Takeoff | BuildLens AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-primary-fixed-variant": "#2d486d",
+                        "surface-tint": "#455f87",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#505f76",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface-container-low": "#f4f3f7",
+                        "on-primary-container": "#8aa4cf",
+                        "inverse-primary": "#adc8f5",
+                        "surface-variant": "#e3e2e6",
+                        "on-tertiary-fixed-variant": "#60410c",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#503300",
+                        "inverse-on-surface": "#f1f0f4",
+                        "outline": "#74777f",
+                        "tertiary-fixed-dim": "#edbf7f",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-primary-fixed": "#001c3b",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#43474e",
+                        "primary": "#022448",
+                        "outline-variant": "#c4c6cf",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb2",
+                        "surface-container-highest": "#e3e2e6",
+                        "surface-dim": "#dad9dd",
+                        "error-container": "#ffdad6",
+                        "background": "#faf9fc",
+                        "primary-container": "#1e3a5f",
+                        "on-tertiary-fixed": "#291800",
+                        "on-secondary-container": "#54647a",
+                        "on-tertiary-container": "#c69b5f",
+                        "surface": "#faf9fc",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2f3033",
+                        "tertiary": "#341f00",
+                        "surface-container": "#eeedf1",
+                        "surface-bright": "#faf9fc",
+                        "on-surface": "#1a1c1e",
+                        "primary-fixed-dim": "#adc8f5",
+                        "primary-fixed": "#d5e3ff",
+                        "secondary-container": "#d0e1fb",
+                        "surface-container-high": "#e9e7eb",
+                        "on-background": "#1a1c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "container-max": "1440px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "stack-lg": "24px",
+                        "margin-desktop": "32px",
+                        "stack-sm": "8px",
+                        "stack-xs": "4px",
+                        "stack-xl": "48px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "mono-data": ["13px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .blueprint-canvas {
+            background-image: 
+                linear-gradient(#e3e2e6 1px, transparent 1px),
+                linear-gradient(90deg, #e3e2e6 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-margin-desktop h-16 w-full fixed top-0 z-50 bg-background border-b border-outline-variant">
+<div class="flex items-center gap-stack-md">
+<span class="font-headline-md text-headline-md font-bold text-primary">BuildLens AI</span>
+<nav class="hidden md:flex items-center ml-stack-xl gap-stack-lg">
+<a class="font-body-lg text-body-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Opportunities</a>
+<a class="font-body-lg text-body-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-stack-md">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOW_KFPrJ9zDGnduX6tazib-l2NPghoKVbD-n6nUAz0fqo1RnV11rOiF06j2zUnyjn87AEbhiMui980H_GvHElz8ECRyd2lx6egeaGtZjnaW0-yETePHOwhY-mVBhV9rudYUTXTRUvnAXQoxwSaqDouGEp2h2aVtq-eSD9zTsRimAQnQh4xktOi9xT4xJ3YFhb11xPemc6S2EHMVnqwg6kxksVCtVKM7PdSTxr0cqWJzrzNPSmTkmaRaeZxTYy1HF6VCKSFpAWu3qd"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="flex flex-col p-4 gap-stack-md fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-surface-container-low border-r border-outline-variant">
+<div class="flex items-center gap-stack-sm mb-4">
+<div class="w-10 h-10 bg-primary rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-primary">Project Alpha</div>
+<div class="font-label-md text-label-md text-on-surface-variant">Terminal Expansion</div>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-md text-label-md">Documents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Spec Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-secondary-container text-on-secondary-container font-semibold rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+<span class="font-label-md text-label-md">Plan Takeoff</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">request_quote</span>
+<span class="font-label-md text-label-md">Estimate Draft</span>
+</a>
+</nav>
+<div class="mt-4">
+<button class="w-full py-3 bg-primary text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                Run BuildLens AI
+            </button>
+</div>
+<div class="mt-auto flex flex-col gap-1 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">archive</span>
+<span class="font-label-md text-label-md">Archive</span>
+</a>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="ml-64 mt-16 h-[calc(100vh-64px)] flex overflow-hidden">
+<!-- Left Panel: Interactive Plan Viewer (65%) -->
+<section class="w-[65%] h-full flex flex-col relative border-r border-outline-variant bg-white">
+<!-- Toolbar -->
+<div class="h-12 border-b border-outline-variant flex items-center justify-between px-4 bg-surface-container-lowest">
+<div class="flex items-center gap-stack-sm">
+<span class="font-label-md text-label-md text-on-surface-variant mr-2">Sheet C-104: Site Drainage &amp; Grading</span>
+<div class="flex border border-outline-variant rounded overflow-hidden">
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant border-r border-outline-variant">
+<span class="material-symbols-outlined text-sm">zoom_in</span>
+</button>
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant border-r border-outline-variant">
+<span class="material-symbols-outlined text-sm">zoom_out</span>
+</button>
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">pan_tool</span>
+</button>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex border border-outline-variant rounded overflow-hidden">
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant border-r border-outline-variant">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">square_foot</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="bg-primary-container text-on-primary-container px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">AI Layer Active</span>
+<button class="p-1.5 hover:bg-surface-variant text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">layers</span>
+</button>
+</div>
+</div>
+<!-- Viewer Canvas -->
+<div class="flex-1 relative overflow-hidden blueprint-canvas bg-[#f8f9fa]">
+<!-- Simulated Blueprint Image -->
+<div class="absolute inset-0 p-8 flex items-center justify-center">
+<div class="relative w-full h-full max-w-4xl shadow-2xl bg-white border border-outline-variant p-4">
+<img class="w-full h-full object-contain opacity-80 grayscale contrast-125" data-alt="A high-fidelity architectural technical drawing of a complex road intersection and civil drainage layout. The drawing features crisp black line work, technical annotations, and precise engineering symbols on a clean white background. Large semi-transparent blue and orange polygon overlays highlight specific infrastructure zones, representing AI-detected quantities for a construction bid. The overall aesthetic is professional, clinical, and high-performance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0WMjVVLWtDZltRKLDq2xqV7gBVzBe0Ch0Xxqm98DDfiDYd0pSL53qnDA1c1lfH0r76g-zPytoCrO4Kpi6FwatJ3toB7jYuAimhjHV-EkYXaPgQpMZ6d7ZEuLSl-_O0p23sjeSjQ_Zi7GawAJVhNrblcKpTCOL9SqKoihvjHvfR6yK0-SOrELo7iK7aSKmU0GetkgKRgRAQdxhO5bBQyrlEGcoAs-jidjzkYSZWB1Zoh8MlolmggUZPfqTnCGM7DogM36Ht3ZbZ1cU"/>
+<!-- AI Overlays (Polygons) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 100 100">
+<!-- Active Selection Highlight -->
+<polygon class="animate-pulse" fill="rgba(2, 36, 72, 0.15)" points="30,40 50,35 55,55 35,60" stroke="#022448" stroke-dasharray="1" stroke-width="0.5"></polygon>
+<circle cx="30" cy="40" fill="#022448" r="0.5"></circle>
+<circle cx="50" cy="35" fill="#022448" r="0.5"></circle>
+<circle cx="55" cy="55" fill="#022448" r="0.5"></circle>
+<circle cx="35" cy="60" fill="#022448" r="0.5"></circle>
+<!-- Static Highlight 1 -->
+<polygon fill="rgba(186, 26, 26, 0.1)" points="65,20 85,25 80,45 60,40" stroke="#ba1a1a" stroke-width="0.3"></polygon>
+<!-- Static Highlight 2 -->
+<path d="M10,70 Q 30,65 50,80 L 45,95 Q 25,80 5,85 Z" fill="rgba(80, 51, 0, 0.1)" stroke="#503300" stroke-width="0.3"></path>
+</svg>
+<!-- Float label for active highlight -->
+<div class="absolute top-[45%] left-[40%] bg-primary text-white text-[10px] px-2 py-1 rounded shadow-lg flex flex-col pointer-events-none">
+<span class="font-bold">Asphalt Paving - Type A</span>
+<span>4,250 SQFT</span>
+</div>
+</div>
+</div>
+<!-- Bottom Zoom Control -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 border border-outline-variant rounded-full flex items-center gap-4 shadow-xl">
+<span class="font-label-md text-label-md text-on-surface-variant">150%</span>
+<div class="w-32 h-1 bg-outline-variant rounded-full relative">
+<div class="absolute left-0 top-0 h-full w-[60%] bg-primary rounded-full"></div>
+<div class="absolute left-[60%] top-1/2 -translate-y-1/2 w-3 h-3 bg-primary border-2 border-white rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Extracted Quantity Table (35%) -->
+<section class="w-[35%] h-full flex flex-col bg-surface">
+<div class="p-margin-desktop border-b border-outline-variant bg-white">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-headline-sm text-headline-sm text-primary">Takeoff Summary</h2>
+<button class="text-primary hover:bg-primary/5 p-1 rounded transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="flex gap-2">
+<div class="flex-1 bg-surface-container p-3 rounded border border-outline-variant">
+<div class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tight">Total Items</div>
+<div class="text-xl font-bold text-primary">42</div>
+</div>
+<div class="flex-1 bg-surface-container p-3 rounded border border-outline-variant">
+<div class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tight">Review Required</div>
+<div class="text-xl font-bold text-error">8</div>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface-container-high z-10">
+<tr>
+<th class="px-4 py-3 font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Item</th>
+<th class="px-4 py-3 font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Qty/Unit</th>
+<th class="px-4 py-3 font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Status</th>
+<th class="px-4 py-3 font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Source</th>
+</tr>
+</thead>
+<tbody class="bg-white">
+<!-- Active Row -->
+<tr class="bg-primary/5 border-l-4 border-l-primary hover:bg-primary/10 cursor-pointer">
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-bold text-primary text-body-sm">Asphalt Paving - Type A</div>
+<div class="text-[11px] text-on-surface-variant">Area Measurement</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-mono-data text-mono-data font-bold">4,250.00</div>
+<div class="text-[11px] text-on-surface-variant uppercase font-bold">SQFT</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200">VERIFIED</span>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant font-mono-data text-[11px] text-on-surface-variant">
+                                C-104
+                            </td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-surface-variant/20 cursor-pointer transition-colors">
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-semibold text-on-surface text-body-sm">Curb &amp; Gutter (Type B)</div>
+<div class="text-[11px] text-on-surface-variant">Linear Path</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-mono-data text-mono-data">1,120.50</div>
+<div class="text-[11px] text-on-surface-variant uppercase font-bold">LF</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">NEEDS REVIEW</span>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant font-mono-data text-[11px] text-on-surface-variant">
+                                C-104
+                            </td>
+</tr>
+<!-- Row with Warning -->
+<tr class="hover:bg-surface-variant/20 cursor-pointer transition-colors">
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-semibold text-on-surface text-body-sm">Storm Manhole (48")</div>
+<div class="text-[11px] text-on-surface-variant">Count Extraction</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-mono-data text-mono-data">12.00</div>
+<div class="text-[11px] text-on-surface-variant uppercase font-bold">EA</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<span class="text-error text-[10px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                    CHECK CAREFULLY
+                                </span>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant font-mono-data text-[11px] text-on-surface-variant">
+                                C-201
+                            </td>
+</tr>
+<!-- Dense Zebra Row -->
+<tr class="bg-primary/[0.02] hover:bg-surface-variant/20 cursor-pointer transition-colors">
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-semibold text-on-surface text-body-sm">Reinforced Pipe (24")</div>
+<div class="text-[11px] text-on-surface-variant">Linear Path</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-mono-data text-mono-data">845.00</div>
+<div class="text-[11px] text-on-surface-variant uppercase font-bold">LF</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200">VERIFIED</span>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant font-mono-data text-[11px] text-on-surface-variant">
+                                C-201
+                            </td>
+</tr>
+<tr class="hover:bg-surface-variant/20 cursor-pointer transition-colors">
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-semibold text-on-surface text-body-sm">Catch Basin (Type 1)</div>
+<div class="text-[11px] text-on-surface-variant">Count Extraction</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<div class="font-mono-data text-mono-data">8.00</div>
+<div class="text-[11px] text-on-surface-variant uppercase font-bold">EA</div>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant">
+<span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200">VERIFIED</span>
+</td>
+<td class="px-4 py-4 border-b border-outline-variant font-mono-data text-[11px] text-on-surface-variant">
+                                C-104
+                            </td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low">
+<div class="flex gap-2">
+<button class="flex-1 py-2 px-4 border border-outline text-on-surface font-semibold rounded text-sm hover:bg-white transition-colors">Export to Excel</button>
+<button class="flex-1 py-2 px-4 bg-primary text-white font-semibold rounded text-sm hover:opacity-90 transition-opacity">Push to Estimate</button>
+</div>
+</div>
+</section>
+</main>
+<!-- AI Command Bar Floating (CMD+K style) -->
+<div class="fixed bottom-8 right-8 z-[60]">
+<div class="bg-white border border-outline-variant shadow-[0px_4px_20px_rgba(30,58,95,0.08)] rounded-full h-12 flex items-center px-4 gap-3 cursor-pointer hover:border-primary transition-colors group">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">auto_awesome</span>
+<span class="text-on-surface-variant text-sm font-medium pr-8">Ask BuildLens AI about these quantities...</span>
+<span class="bg-surface-container-highest px-1.5 py-0.5 rounded text-[10px] font-bold text-on-surface-variant">⌘K</span>
+</div>
+</div>
+</body></html>

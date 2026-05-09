@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BuildLens AI - AI Procurement Feed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #faf9fc;
+        }
+        .ai-glow {
+            background: linear-gradient(135deg, #ffffff 0%, #f4f7fa 100%);
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-primary-fixed-variant": "#2d486d",
+                      "surface-tint": "#455f87",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary": "#505f76",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "surface-container-low": "#f4f3f7",
+                      "on-primary-container": "#8aa4cf",
+                      "inverse-primary": "#adc8f5",
+                      "surface-variant": "#e3e2e6",
+                      "on-tertiary-fixed-variant": "#60410c",
+                      "on-error-container": "#93000a",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#503300",
+                      "inverse-on-surface": "#f1f0f4",
+                      "outline": "#74777f",
+                      "tertiary-fixed-dim": "#edbf7f",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "on-primary-fixed": "#001c3b",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#43474e",
+                      "primary": "#022448",
+                      "outline-variant": "#c4c6cf",
+                      "secondary-fixed": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed": "#ffddb2",
+                      "surface-container-highest": "#e3e2e6",
+                      "surface-dim": "#dad9dd",
+                      "error-container": "#ffdad6",
+                      "background": "#faf9fc",
+                      "primary-container": "#1e3a5f",
+                      "on-tertiary-fixed": "#291800",
+                      "on-secondary-container": "#54647a",
+                      "on-tertiary-container": "#c69b5f",
+                      "surface": "#faf9fc",
+                      "error": "#ba1a1a",
+                      "inverse-surface": "#2f3033",
+                      "tertiary": "#341f00",
+                      "surface-container": "#eeedf1",
+                      "surface-bright": "#faf9fc",
+                      "on-surface": "#1a1c1e",
+                      "primary-fixed-dim": "#adc8f5",
+                      "primary-fixed": "#d5e3ff",
+                      "secondary-container": "#d0e1fb",
+                      "surface-container-high": "#e9e7eb",
+                      "on-background": "#1a1c1e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "container-max": "1440px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "stack-lg": "24px",
+                      "margin-desktop": "32px",
+                      "stack-sm": "8px",
+                      "stack-xs": "4px",
+                      "stack-xl": "48px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "mono-data": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "mono-data": ["13px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar from Shared Components -->
+<header class="flex justify-between items-center px-margin-desktop h-16 w-full fixed top-0 z-50 bg-background dark:bg-background border-b border-outline-variant dark:border-outline flat no shadows">
+<div class="flex items-center gap-stack-lg">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">BuildLens AI</span>
+<nav class="hidden md:flex items-center gap-stack-md ml-margin-desktop">
+<a class="font-body-lg text-body-lg text-primary dark:text-primary-fixed border-b-2 border-primary font-bold pb-1 hover:text-primary transition-colors" href="#">Opportunities</a>
+<a class="font-body-lg text-body-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-stack-md">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Search opportunities..." type="text"/>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors p-2" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors p-2" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" data-alt="A professional close-up portrait of a civil engineering executive in a modern office environment. The person is wearing a sharp navy blue blazer, symbolizing authority and expertise. The lighting is bright and clean, with a shallow depth of field showing a blurred high-tech architectural office in the background. The overall aesthetic is corporate, minimalist, and high-confidence, reflecting the BuildLens brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLPhNitJSagoP_JTdH7oJwTfv8nELOhKpZZLAOr0pQGMsj081rJMr_fl4-ChdqfwmTuyVRYVdFnCmTdFIodzgcGVBrkjq5XgJAwRSSJ2BvKpJ40_X9Ob5cG1R5j-6LXziKq-MoWc9mfEh4mGJJh5NCO0y9UJmC5AeSPhW9Yd5_OTEHZdmQbw80ehbq5wmYq8YcLshzbXeAV3h0IQFlghvtw2pgsZNc7QZ5m1bX3k4lzE_8e8Sk8fMy5vdQvuDjXXmmSr028xdhxSJX"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Suppressed for focused procurement discovery feed as per UX logic) -->
+<main class="pt-16 min-h-screen">
+<!-- Hero Section: Advanced Command Bar -->
+<section class="bg-surface-container-lowest pt-stack-xl pb-stack-lg px-margin-desktop border-b border-outline-variant">
+<div class="max-w-container-max mx-auto">
+<div class="flex flex-col gap-stack-md">
+<div class="flex flex-col">
+<h1 class="font-display-lg text-display-lg text-primary mb-2">Discovery Feed</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Find and analyze heavy civil bid opportunities powered by BuildLens AI intelligence.</p>
+</div>
+<!-- Command Bar / Search Section -->
+<div class="mt-stack-md p-stack-md bg-background border border-outline-variant rounded-xl shadow-sm">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter items-end">
+<div class="md:col-span-4">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block uppercase tracking-wider">Search Keywords</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md" placeholder="e.g. SR-400 Rehabilitation" type="text"/>
+</div>
+</div>
+<div class="md:col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block uppercase tracking-wider">Municipality</label>
+<select class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md appearance-none">
+<option>All Regions</option>
+<option>FDOT District 5</option>
+<option>City of Orlando</option>
+<option>Orange County</option>
+</select>
+</div>
+<div class="md:col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block uppercase tracking-wider">Project Type</label>
+<select class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md appearance-none">
+<option>All Types</option>
+<option>Paving</option>
+<option>Drainage</option>
+<option>Signalization</option>
+</select>
+</div>
+<div class="md:col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block uppercase tracking-wider">Estimated Value</label>
+<select class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md appearance-none">
+<option>Any Value</option>
+<option>$1M - $5M</option>
+<option>$5M - $20M</option>
+<option>$20M+</option>
+</select>
+</div>
+<div class="md:col-span-2">
+<button class="w-full bg-primary text-on-primary py-3 px-4 rounded-lg font-label-md uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                                    Apply
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Content: Project Grid -->
+<section class="px-margin-desktop py-stack-xl max-w-container-max mx-auto">
+<div class="flex items-center justify-between mb-stack-lg">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-primary">Active Opportunities</span>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-label-md">148 Projects</span>
+</div>
+<div class="flex items-center gap-stack-sm">
+<button class="p-2 border border-outline-variant bg-white rounded flex items-center gap-2 text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">sort</span> Sort: Newest
+                    </button>
+<button class="p-2 border border-outline-variant bg-white rounded flex items-center gap-2 text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+</button>
+</div>
+</div>
+<!-- Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1 -->
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow group relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">FDOT District 5</span>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-1 group-hover:text-primary-container transition-colors">SR-400 Pavement Rehabilitation</h3>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-error font-bold uppercase">Due Oct 14</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">14 Days Left</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Paving</span>
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Maintenance</span>
+</div>
+<div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant mb-6">
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Est. Value</span>
+<span class="font-mono-data text-headline-sm text-primary">$2.5M - $5.0M</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Docs</span>
+<span class="font-mono-data text-headline-sm text-primary">42</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-label-md text-green-700 font-bold uppercase">Package Analyzed</span>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md uppercase tracking-wider hover:bg-primary-container transition-colors flex items-center gap-2">
+                            Open Project
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow group relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">City of Orlando</span>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-1">Main St. Stormwater Expansion</h3>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold uppercase">Due Nov 02</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">32 Days Left</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Drainage</span>
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Utility</span>
+</div>
+<div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant mb-6">
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Est. Value</span>
+<span class="font-mono-data text-headline-sm text-primary">$8.2M</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Docs</span>
+<span class="font-mono-data text-headline-sm text-primary">118</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-label-md text-primary font-bold uppercase">Processing Docs</span>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md uppercase tracking-wider hover:bg-primary-container transition-colors flex items-center gap-2">
+                            Open Project
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow group relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Seminole County</span>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-1">Red Bug Lake Intersection</h3>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-error font-bold uppercase">Due Oct 18</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">18 Days Left</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Signalization</span>
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Civil</span>
+</div>
+<div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant mb-6">
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Est. Value</span>
+<span class="font-mono-data text-headline-sm text-primary">$1.2M - $2.0M</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Docs</span>
+<span class="font-mono-data text-headline-sm text-primary">24</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-label-md text-green-700 font-bold uppercase">Package Analyzed</span>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md uppercase tracking-wider hover:bg-primary-container transition-colors flex items-center gap-2">
+                            Open Project
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow group relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Florida Turnpike Ent.</span>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-1">SunPass Gantry Upgrade Ph. 2</h3>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold uppercase">Due Dec 05</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">65 Days Left</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Technology</span>
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Toll</span>
+</div>
+<div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant mb-6">
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Est. Value</span>
+<span class="font-mono-data text-headline-sm text-primary">$15.0M+</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Docs</span>
+<span class="font-mono-data text-headline-sm text-primary">203</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-label-md text-green-700 font-bold uppercase">Package Analyzed</span>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md uppercase tracking-wider hover:bg-primary-container transition-colors flex items-center gap-2">
+                            Open Project
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- AI Insights Bento Placeholder -->
+<div class="bg-gradient-to-br from-primary-container to-primary border border-outline-variant rounded-xl p-6 flex flex-col text-on-primary md:col-span-2">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-label-md uppercase tracking-[0.2em] opacity-80">Intelligence Feature</span>
+<h3 class="font-display-lg text-display-lg mt-2 leading-tight">Bid Win Probability Analysis</h3>
+</div>
+<span class="material-symbols-outlined text-[48px] opacity-20">insights</span>
+</div>
+<p class="font-body-lg text-body-lg mt-4 max-w-md opacity-90">
+                        BuildLens AI analyzes your company's past performance, regional competition, and project technical requirements to predict your chances of a successful bid.
+                    </p>
+<div class="mt-8 grid grid-cols-3 gap-stack-md">
+<div class="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
+<span class="block font-label-md opacity-70">Historical Win Rate</span>
+<span class="text-headline-md font-mono-data">24.5%</span>
+</div>
+<div class="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
+<span class="block font-label-md opacity-70">Market Density</span>
+<span class="text-headline-md font-mono-data">Medium</span>
+</div>
+<div class="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
+<span class="block font-label-md opacity-70">AI Match Score</span>
+<span class="text-headline-md font-mono-data">88/100</span>
+</div>
+</div>
+<button class="mt-8 self-start bg-white text-primary px-6 py-3 rounded-lg font-label-md uppercase tracking-widest hover:bg-opacity-90 transition-all">
+                        Upgrade Your Analysis
+                    </button>
+</div>
+<!-- Card 5 -->
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow group relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Brevard County</span>
+<h3 class="font-headline-sm text-headline-sm text-primary mt-1">A1A Bridge Preservation</h3>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold uppercase">Due Nov 15</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">45 Days Left</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-6">
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Bridge</span>
+<span class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full text-label-md font-semibold">Preservation</span>
+</div>
+<div class="grid grid-cols-2 gap-4 py-4 border-y border-outline-variant mb-6">
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Est. Value</span>
+<span class="font-mono-data text-headline-sm text-primary">$3.8M</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md text-on-surface-variant">Docs</span>
+<span class="font-mono-data text-headline-sm text-primary">56</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-label-md text-green-700 font-bold uppercase">Package Analyzed</span>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md uppercase tracking-wider hover:bg-primary-container transition-colors flex items-center gap-2">
+                            Open Project
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Pagination / Load More -->
+<div class="mt-stack-xl flex justify-center">
+<button class="px-8 py-4 bg-white border border-outline-variant rounded-full text-primary font-label-md uppercase tracking-widest hover:bg-surface-container-low transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">expand_more</span>
+                    Load More Opportunities
+                </button>
+</div>
+</section>
+</main>
+<!-- FAB Action Button -->
+<button class="fixed bottom-margin-desktop right-margin-desktop bg-primary-container text-on-primary-container w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-105 transition-transform z-50">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</body></html>

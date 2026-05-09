@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Estimate Draft | BuildLens AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-primary-fixed-variant": "#2d486d",
+                        "surface-tint": "#455f87",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#505f76",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface-container-low": "#f4f3f7",
+                        "on-primary-container": "#8aa4cf",
+                        "inverse-primary": "#adc8f5",
+                        "surface-variant": "#e3e2e6",
+                        "on-tertiary-fixed-variant": "#60410c",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#503300",
+                        "inverse-on-surface": "#f1f0f4",
+                        "outline": "#74777f",
+                        "tertiary-fixed-dim": "#edbf7f",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-primary-fixed": "#001c3b",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#43474e",
+                        "primary": "#022448",
+                        "outline-variant": "#c4c6cf",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb2",
+                        "surface-container-highest": "#e3e2e6",
+                        "surface-dim": "#dad9dd",
+                        "error-container": "#ffdad6",
+                        "background": "#faf9fc",
+                        "primary-container": "#1e3a5f",
+                        "on-tertiary-fixed": "#291800",
+                        "on-secondary-container": "#54647a",
+                        "on-tertiary-container": "#c69b5f",
+                        "surface": "#faf9fc",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2f3033",
+                        "tertiary": "#341f00",
+                        "surface-container": "#eeedf1",
+                        "surface-bright": "#faf9fc",
+                        "on-surface": "#1a1c1e",
+                        "primary-fixed-dim": "#adc8f5",
+                        "primary-fixed": "#d5e3ff",
+                        "secondary-container": "#d0e1fb",
+                        "surface-container-high": "#e9e7eb",
+                        "on-background": "#1a1c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "container-max": "1440px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "stack-lg": "24px",
+                        "margin-desktop": "32px",
+                        "stack-sm": "8px",
+                        "stack-xs": "4px",
+                        "stack-xl": "48px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "mono-data": ["13px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+        }
+        .zebra-stripe:nth-child(even) {
+            background-color: rgba(2, 36, 72, 0.02);
+        }
+        .custom-shadow {
+            box-shadow: 0px 4px 20px rgba(30, 58, 95, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md">
+<!-- TopNavBar -->
+<nav class="flex justify-between items-center px-margin-desktop h-16 w-full fixed top-0 z-50 bg-background border-b border-outline-variant">
+<div class="flex items-center gap-stack-lg">
+<span class="font-headline-md text-headline-md font-bold text-primary">BuildLens AI</span>
+<div class="hidden md:flex gap-stack-md items-center ml-stack-xl">
+<a class="font-body-lg text-body-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Opportunities</a>
+<a class="font-body-lg text-body-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Insights</a>
+</div>
+</div>
+<div class="flex items-center gap-stack-md">
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container rounded-full">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container rounded-full">settings</span>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest ml-2 border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a construction executive in business attire, looking confident. The background is a blurred high-end office with natural light. The photo has a clean, professional aesthetic with neutral tones consistent with a corporate enterprise dashboard environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2-ULgxu9N6fxyftFLxRkJgKK2y8Zl-y8q5Ck-qaf_9mr6l93Uda-cy5BTKI7lKqo2RXd4Gk0Lp4DmNPNnqUn3YjMa7X6HBIxLETK1-PYhutFr4OWJQ5vTNb7WApWSPSaNGnZouI26NR3kLlHJgJZKe-nKVU4GevKpgCrImpmu_3LQZJ_AQbChU1U65A-KQOtu2eFn7kKxo_RuemBrH5ULCFzxTlwat8FF_vyIM0VBXYsDqm_njxCemNn07CqSrDn0oWLqiGG1Gyxw"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="flex flex-col p-4 gap-stack-md fixed left-0 top-16 h-[calc(100vh-64px)] z-40 bg-surface-container-low border-r border-outline-variant w-64">
+<div class="px-2 py-4 border-b border-outline-variant mb-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<p class="font-headline-sm text-headline-sm font-semibold text-primary leading-tight">Project Alpha</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Terminal Expansion</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                Documents
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Spec Analysis
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">architecture</span>
+                Plan Takeoff
+            </a>
+<a class="flex items-center gap-3 p-3 bg-secondary-container text-on-secondary-container font-semibold rounded-lg font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">request_quote</span>
+                Estimate Draft
+            </a>
+</div>
+<div class="mt-4">
+<button class="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:opacity-90 active:scale-95 transition-all text-label-md">
+                Run BuildLens AI
+            </button>
+</div>
+<div class="mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4">
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">archive</span>
+                Archive
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-margin-desktop min-h-[calc(100vh-64px)] pb-32">
+<header class="mb-stack-lg flex justify-between items-end">
+<div>
+<h1 class="font-display-lg text-display-lg text-primary">Estimate Draft</h1>
+<p class="text-on-surface-variant font-body-lg">Review and refine AI-generated quantities and pricing for the Terminal Expansion project.</p>
+</div>
+<div class="flex gap-stack-sm">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg font-semibold text-primary hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">history</span>
+                    Version History
+                </button>
+</div>
+</header>
+<!-- Summary Cards Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-xl">
+<!-- Estimated Bid Value -->
+<div class="bg-white border border-outline-variant p-stack-lg rounded-xl custom-shadow">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-2">Estimated Bid Value</p>
+<p class="font-display-lg text-display-lg text-primary font-mono-data">$4,240,500.00</p>
+<div class="mt-4 flex items-center gap-1 text-on-tertiary-container bg-tertiary-fixed px-2 py-1 rounded w-fit text-xs font-bold">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                    2.4% vs Benchmark
+                </div>
+</div>
+<!-- Total Line Items -->
+<div class="bg-white border border-outline-variant p-stack-lg rounded-xl custom-shadow">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-2">Total Line Items</p>
+<p class="font-display-lg text-display-lg text-primary font-mono-data">124</p>
+<p class="mt-4 text-on-surface-variant text-body-sm">Categorized across 14 divisions</p>
+</div>
+<!-- Missing Prices -->
+<div class="bg-white border border-error/20 p-stack-lg rounded-xl custom-shadow border-l-4 border-l-error bg-error-container/10">
+<p class="font-label-md text-label-md text-error uppercase mb-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">warning</span> Missing Prices
+                </p>
+<p class="font-display-lg text-display-lg text-error font-mono-data">4</p>
+<p class="mt-4 text-on-error-container text-body-sm">Requires manual vendor quote</p>
+</div>
+<!-- AI Reviewed Items -->
+<div class="bg-white border border-outline-variant p-stack-lg rounded-xl custom-shadow relative overflow-hidden">
+<div class="absolute top-0 right-0 p-stack-md opacity-10">
+<span class="material-symbols-outlined text-[64px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-2">AI Reviewed Items</p>
+<p class="font-display-lg text-display-lg text-primary font-mono-data">100%</p>
+<div class="mt-4 flex items-center gap-1 text-on-primary-fixed-variant bg-primary-fixed px-2 py-1 rounded w-fit text-xs font-bold">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+                    Confidence: High
+                </div>
+</div>
+</div>
+<!-- Main Estimate Table -->
+<section class="bg-white border border-outline-variant rounded-xl custom-shadow overflow-hidden">
+<div class="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 border border-outline-variant rounded-lg px-3 py-1.5 bg-white">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">search</span>
+<input class="border-none focus:ring-0 text-body-md p-0 w-64 bg-transparent" placeholder="Search items..." type="text"/>
+</div>
+<div class="flex border border-outline-variant rounded-lg overflow-hidden">
+<button class="px-4 py-1.5 bg-surface-variant text-primary font-semibold text-body-sm">Table</button>
+<button class="px-4 py-1.5 text-on-surface-variant hover:bg-surface-container text-body-sm border-l border-outline-variant">Visual</button>
+</div>
+</div>
+<div class="flex items-center gap-stack-md">
+<span class="text-body-sm text-on-surface-variant">Showing 1-15 of 124</span>
+<div class="flex gap-1">
+<button class="p-1.5 border border-outline-variant rounded hover:bg-surface-container"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-1.5 border border-outline-variant rounded hover:bg-surface-container"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface-container-low border-b border-outline-variant z-10">
+<tr>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider">Item Description</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-32">Quantity</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-24">Unit</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-40">Unit Price</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-40">Total</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-32 text-center">Source</th>
+<th class="px-6 py-4 font-semibold text-primary font-label-md text-label-md uppercase tracking-wider w-16"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/50">
+<tr class="zebra-stripe hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<p class="text-primary font-semibold font-body-md">03 30 00 - Cast-in-Place Concrete</p>
+<p class="text-on-surface-variant text-body-sm">Foundation Footings - 4000 PSI</p>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary">1,240.00</td>
+<td class="px-6 py-4 text-on-surface-variant font-body-md">CY</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 border border-outline-variant rounded px-2 py-1.5 group-hover:bg-white transition-colors">
+<span class="text-on-surface-variant text-body-sm">$</span>
+<input class="w-full border-none p-0 focus:ring-0 font-mono-data text-primary bg-transparent" type="text" value="185.00"/>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary font-semibold">$229,400.00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 rounded-full bg-primary-container/10 text-primary-container text-[10px] font-bold uppercase border border-primary-container/20">Spec</span>
+</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="zebra-stripe hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<p class="text-primary font-semibold font-body-md">05 12 00 - Structural Steel Framing</p>
+<p class="text-on-surface-variant text-body-sm">W-Shape Beams &amp; Girders</p>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary">485.50</td>
+<td class="px-6 py-4 text-on-surface-variant font-body-md">TON</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 border border-outline-variant rounded px-2 py-1.5 group-hover:bg-white transition-colors">
+<span class="text-on-surface-variant text-body-sm">$</span>
+<input class="w-full border-none p-0 focus:ring-0 font-mono-data text-primary bg-transparent" type="text" value="3,400.00"/>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary font-semibold">$1,650,700.00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 rounded-full bg-on-tertiary-container/10 text-on-tertiary-container text-[10px] font-bold uppercase border border-on-tertiary-container/20">Plan</span>
+</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="zebra-stripe hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<p class="text-primary font-semibold font-body-md">07 54 23 - Thermoplastic Membrane Roofing</p>
+<p class="text-on-surface-variant text-body-sm">60-Mil TPO System</p>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary">82,000.00</td>
+<td class="px-6 py-4 text-on-surface-variant font-body-md">SF</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 border border-error/50 bg-error-container/10 rounded px-2 py-1.5 group-hover:bg-white transition-colors">
+<span class="text-error text-body-sm">$</span>
+<input class="w-full border-none p-0 focus:ring-0 font-mono-data text-error bg-transparent" type="text" value="0.00"/>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-error font-semibold">$0.00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 rounded-full bg-outline/10 text-outline text-[10px] font-bold uppercase border border-outline/20">Manual</span>
+</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="zebra-stripe hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<p class="text-primary font-semibold font-body-md">08 44 13 - Glazed Aluminum Curtain Walls</p>
+<p class="text-on-surface-variant text-body-sm">High-Performance Glazing</p>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary">12,450.00</td>
+<td class="px-6 py-4 text-on-surface-variant font-body-md">SF</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 border border-outline-variant rounded px-2 py-1.5 group-hover:bg-white transition-colors">
+<span class="text-on-surface-variant text-body-sm">$</span>
+<input class="w-full border-none p-0 focus:ring-0 font-mono-data text-primary bg-transparent" type="text" value="125.00"/>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary font-semibold">$1,556,250.00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 rounded-full bg-primary-container/10 text-primary-container text-[10px] font-bold uppercase border border-primary-container/20">Spec</span>
+</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<tr class="zebra-stripe hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<p class="text-primary font-semibold font-body-md">09 91 23 - Interior Painting</p>
+<p class="text-on-surface-variant text-body-sm">Premium Low-VOC Finish</p>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary">215,000.00</td>
+<td class="px-6 py-4 text-on-surface-variant font-body-md">SF</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 border border-outline-variant rounded px-2 py-1.5 group-hover:bg-white transition-colors">
+<span class="text-on-surface-variant text-body-sm">$</span>
+<input class="w-full border-none p-0 focus:ring-0 font-mono-data text-primary bg-transparent" type="text" value="1.85"/>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-primary font-semibold">$397,750.00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 rounded-full bg-on-tertiary-container/10 text-on-tertiary-container text-[10px] font-bold uppercase border border-on-tertiary-container/20">Plan</span>
+</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+<tfoot class="bg-surface-container-high border-t-2 border-primary">
+<tr>
+<td class="px-6 py-4 text-right font-semibold text-primary font-headline-sm" colspan="4">Draft Total Estimate</td>
+<td class="px-6 py-4 font-mono-data text-primary font-bold text-headline-sm">$3,834,100.00</td>
+<td colspan="2"></td>
+</tr>
+</tfoot>
+</table>
+</div>
+</section>
+<!-- AI Insights Panel -->
+<section class="mt-stack-lg p-stack-lg rounded-xl border border-outline-variant bg-gradient-to-b from-white to-surface-container-low flex items-start gap-4 custom-shadow">
+<div class="bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1">BuildLens AI Insights</h3>
+<p class="text-body-md text-on-surface-variant max-w-3xl">
+                    I detected that the "Structural Steel Framing" unit price is 12% higher than your last three projects in this region. This may be due to recent market fluctuations in raw materials. I recommend verifying with your preferred vendor before final submission. Also, 4 items in Division 07 are missing unit costs.
+                </p>
+</div>
+</section>
+</main>
+<!-- Bottom Action Bar -->
+<footer class="fixed bottom-0 right-0 left-64 bg-white border-t border-outline-variant px-margin-desktop py-4 z-50 flex justify-between items-center custom-shadow">
+<div class="flex items-center gap-stack-md">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg font-semibold text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">download</span>
+                Export CSV
+            </button>
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg font-semibold text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">add</span>
+                Add Manual Row
+            </button>
+</div>
+<div class="flex items-center gap-stack-md">
+<div class="flex flex-col items-end mr-4">
+<span class="text-label-md text-on-surface-variant uppercase">Final Bid Value</span>
+<span class="text-headline-sm font-bold text-primary">$4,240,500.00</span>
+</div>
+<button class="px-8 py-3 bg-primary text-white rounded-lg font-bold text-body-lg hover:opacity-90 active:scale-95 transition-all flex items-center gap-2">
+                Final Review &amp; Submit
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</footer>
+</body></html>

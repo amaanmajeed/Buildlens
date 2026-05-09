@@ -3,18 +3,150 @@
 :root {
   color-scheme: light;
   --background: #f4f7fa;
-  --foreground: #0f172a;
+  --foreground: #1a1c1e;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #faf9fc;
+  --color-foreground: #1a1c1e;
+  --color-on-background: #1a1c1e;
+  --color-primary: #022448;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1e3a5f;
+  --color-on-primary-container: #8aa4cf;
+  --color-secondary: #505f76;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d0e1fb;
+  --color-on-secondary-container: #54647a;
+  --color-surface: #faf9fc;
+  --color-surface-bright: #faf9fc;
+  --color-surface-container-low: #f4f3f7;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container: #eeedf1;
+  --color-surface-container-high: #e9e7eb;
+  --color-surface-container-highest: #e3e2e6;
+  --color-surface-variant: #e3e2e6;
+  --color-on-surface: #1a1c1e;
+  --color-on-surface-variant: #43474e;
+  --color-outline: #74777f;
+  --color-outline-variant: #c4c6cf;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #d5e3ff;
+  --color-primary-fixed-dim: #adc8f5;
+  --color-secondary-fixed: #d3e4fe;
+  --color-tertiary-fixed: #ffddb2;
+  --color-on-tertiary-fixed: #291800;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --spacing-gutter: 24px;
+  --spacing-margin-desktop: 32px;
+  --spacing-margin-mobile: 16px;
+  --spacing-stack-xs: 4px;
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 24px;
+  --spacing-stack-xl: 48px;
+
+  --max-width-container-max: 1440px;
+
+  --shadow-buildlens: 0px 4px 20px rgba(30, 58, 95, 0.08);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* App-wide UX: pointer/disabled cursor, readable focus rings, sane scrolling */
+@layer base {
+  button:not(:disabled),
+  input:not(:disabled):is([type="button"], [type="submit"], [type="reset"]),
+  input:not(:disabled):is([type="checkbox"], [type="radio"]),
+  input:not(:disabled):is([type="file"]),
+  summary,
+  select:not(:disabled),
+  label:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  a[href] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  input:not(:disabled)[readonly],
+  textarea:not(:disabled)[readonly] {
+    cursor: default;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  /** Keyboard focus visible on interactive primitives (skipped for mouse clicks). */
+  :where(button, a[href], summary, select):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #faf9fc,
+      0 0 0 4px rgb(30 58 95 / 0.78);
+  }
+
+  input:not(:disabled)[type]:not([type="hidden"]):focus-visible:not([readonly]),
+  textarea:not(:disabled):focus-visible:not([readonly]),
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #faf9fc,
+      0 0 0 4px rgb(30 58 95 / 0.78);
+  }
+
+  :where(button, a[href], input[type="checkbox"], summary) {
+    -webkit-tap-highlight-color: rgb(30 58 95 / 0.12);
+    touch-action: manipulation;
+  }
+}
+
+.shadow-buildlens {
+  box-shadow: 0px 4px 20px rgba(30, 58, 95, 0.08);
+}
+
+.ai-gradient-surface {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    rgba(2, 36, 72, 0.05) 100%
+  );
+}
+
+.blueprint-canvas {
+  background-image:
+    linear-gradient(#e3e2e6 1px, transparent 1px),
+    linear-gradient(90deg, #e3e2e6 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.zebra-table tbody tr:nth-child(even) {
+  background-color: rgba(2, 36, 72, 0.02);
 }
