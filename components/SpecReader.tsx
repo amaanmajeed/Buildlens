@@ -170,9 +170,9 @@ export function SpecReader() {
   return (
     <div
       id="buildlens-ai"
-      className="flex min-h-[calc(100vh-4rem)] flex-col overflow-hidden md:flex-row"
+      className="flex min-h-[calc(100vh-4rem)] flex-col max-md:overflow-visible md:h-[calc(100vh-4rem)] md:max-h-[calc(100vh-4rem)] md:flex-row md:overflow-hidden"
     >
-      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-bright p-margin-mobile md:min-h-[calc(100vh-4rem)] md:flex-[0.6] md:p-margin-desktop">
+      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-bright p-margin-mobile md:h-full md:min-h-0 md:flex-[0.6] md:p-margin-desktop">
         <header className="mb-stack-lg flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
@@ -310,8 +310,8 @@ export function SpecReader() {
         </div>
       </section>
 
-      <aside className="ai-gradient-surface flex min-h-[50vh] flex-col border-t border-outline-variant md:min-h-[calc(100vh-4rem)] md:max-w-[44%] md:flex-[0.4] md:border-l md:border-t-0">
-        <div className="sticky top-0 z-10 border-b border-outline-variant bg-white/50 p-stack-lg backdrop-blur-sm">
+      <aside className="ai-gradient-surface flex min-h-[50vh] flex-col border-t border-outline-variant md:h-full md:min-h-0 md:max-w-[44%] md:flex-[0.4] md:border-l md:border-t-0">
+        <div className="shrink-0 border-b border-outline-variant bg-white/50 p-stack-lg backdrop-blur-sm">
           <div className="mb-stack-md flex items-center gap-2.5">
             <Icon name="auto_awesome" size="md" className="text-primary" />
             <h2 className="text-lg font-semibold tracking-tight text-primary">
@@ -333,7 +333,7 @@ export function SpecReader() {
           </div>
         </div>
 
-        <div className="flex-1 space-y-stack-lg overflow-y-auto p-stack-lg">
+        <div className="min-h-0 flex-1 space-y-stack-lg overflow-y-auto p-stack-lg">
           {messages.length === 0 ? (
             <p className="text-sm text-on-surface-variant">
               Ask about materials, sections, schedule, or payment terms.
@@ -364,7 +364,7 @@ export function SpecReader() {
           ) : null}
         </div>
 
-        <div className="border-t border-outline-variant bg-white p-stack-lg">
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-outline-variant bg-white p-stack-lg shadow-[0_-6px_20px_rgba(30,58,95,0.08)] md:static md:z-auto md:shadow-none">
           <form
             onSubmit={(e) => void sendQuestion(e)}
             className="relative flex items-center"

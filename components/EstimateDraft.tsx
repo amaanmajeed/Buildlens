@@ -105,10 +105,11 @@ export function EstimateDraft() {
         </div>
       </header>
 
-      <div className="shadow-buildlens overflow-x-auto rounded-xl border border-outline-variant bg-white">
-        <table className="zebra-table min-w-full text-left">
-          <thead className="sticky top-16 z-[1] border-b border-outline-variant bg-surface-container-low backdrop-blur">
-            <tr className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+      <div className="shadow-buildlens overflow-hidden rounded-xl border border-outline-variant bg-white">
+        <div className="overflow-x-auto">
+          <table className="zebra-table min-w-full text-left">
+            <thead className="border-b border-outline-variant bg-surface-container-low">
+              <tr className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
               <th className="whitespace-nowrap px-4 py-3 text-primary">
                 Bid item description
               </th>
@@ -207,6 +208,7 @@ export function EstimateDraft() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="mt-stack-lg flex flex-wrap items-center gap-4">
