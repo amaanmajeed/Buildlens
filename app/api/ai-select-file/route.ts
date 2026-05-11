@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { demoFallbacksEnabled } from "@/lib/demoFallbacks";
 import type { ProjectFile } from "@/lib/scraper";
 
 const MODEL = "gemini-3.1-flash-lite";
@@ -22,6 +23,12 @@ export async function POST(request: Request) {
         { error: "files array is required" },
         { status: 400 }
       );
+    }
+    if (demoFallbacksEnabled()) {
+      return Response.json({
+        selectedId: files[0].id,
+        reason: "Demo mode: first available PDF selected",
+      });
     }
 
     const key =
