@@ -35,13 +35,13 @@ export function TopNav({
 }) {
   const pathname = usePathname() ?? "";
   const opportunitiesActive =
+    pathname === "/" ||
     pathname === "/opportunities" ||
     pathname.startsWith("/opportunities/");
   const insights =
     insightsActive ??
-    ((!opportunitiesActive && pathname !== "/opportunities") &&
-      (pathname === "/" ||
-        pathname.startsWith("/spec-analysis") ||
+    (!opportunitiesActive &&
+      (pathname.startsWith("/spec-analysis") ||
         pathname.startsWith("/plan-takeoff") ||
         pathname.startsWith("/estimate-draft")));
 
@@ -55,7 +55,7 @@ export function TopNav({
           BuildLens AI
         </Link>
         <nav className="ml-stack-lg hidden gap-stack-md md:flex md:gap-stack-lg">
-          <NavLink href="/opportunities" active={opportunitiesActive}>
+          <NavLink href="/" active={opportunitiesActive}>
             Opportunities
           </NavLink>
           <NavLink href="/spec-analysis" active={insights ?? false}>
