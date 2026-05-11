@@ -2,6 +2,7 @@ import { generatePdfText } from "@/lib/gemini";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
 import { MSG } from "@/lib/messages";
 import { parseJsonArray } from "@/lib/parseJson";
+import { demoFallbacksEnabled, demoSovRows } from "@/lib/demoFallbacks";
 import type { SovRow } from "@/lib/types";
 
 const SOV_PROMPT = `You are a construction estimating assistant.
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
     const pdfBase64 = body?.pdfBase64 as string | undefined;
     if (!pdfBase64 || typeof pdfBase64 !== "string") {
       return Response.json({ error: "Invalid request." }, { status: 400 });
+    }
+    if (demoFallbacksEnabled()) {
+      return Response.json({ schedule: demoSovRows });
     }
 
     const raw = await generatePdfText(pdfBase64, SOV_PROMPT);
