@@ -43,8 +43,7 @@ export function TopNav({
       (pathname === "/" ||
         pathname.startsWith("/spec-analysis") ||
         pathname.startsWith("/plan-takeoff") ||
-        pathname.startsWith("/estimate-draft") ||
-        pathname.startsWith("/documents")));
+        pathname.startsWith("/estimate-draft")));
 
   return (
     <header className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-background px-margin-mobile md:px-margin-desktop">

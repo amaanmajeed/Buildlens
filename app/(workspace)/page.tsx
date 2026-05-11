@@ -78,24 +78,17 @@ export default function ProjectHubPage() {
             Workflow Progress
           </h2>
           <div className="-mx-1 overflow-x-auto pb-1 pt-2">
-            <div className="relative min-w-[520px] px-6 md:min-w-0">
+            <div className="relative min-w-[400px] px-6 md:min-w-0">
               <div
                 aria-hidden
                 className="absolute left-[10%] right-[10%] top-[26px] z-[1] h-0.5 rounded-full bg-surface-container-high"
               />
-              <div className="relative z-[2] grid grid-cols-4 gap-2 md:gap-4">
+              <div className="relative z-[2] grid grid-cols-3 gap-2 md:gap-4">
                 {[
-                  {
-                    icon: "check",
-                    label: "Documents",
-                    status: "Completed",
-                    done: true,
-                    active: false,
-                  },
                   {
                     icon: "analytics",
                     label: "Spec Analysis",
-                    status: "In progress",
+                    status: "Start here",
                     done: false,
                     active: true,
                   },
@@ -150,17 +143,17 @@ export default function ProjectHubPage() {
 
         <div className="shadow-buildlens col-span-12 flex items-start gap-4 rounded-xl border border-outline-variant bg-white p-6 md:col-span-4 md:p-7">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-secondary-fixed text-primary ring-1 ring-primary/10">
-            <Icon name="description" size="xl" className="text-primary" />
+            <Icon name="analytics" size="xl" className="text-primary" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase leading-snug tracking-[0.06em] text-on-surface-variant">
-              Documents organized
+              Guided workflow
             </p>
             <h3 className="mt-1 text-3xl font-semibold tabular-nums leading-none tracking-tight text-primary md:text-[2rem]">
-              94
+              3 steps
             </h3>
             <p className="mt-2 text-[13px] leading-snug text-on-surface-variant">
-              All sets verified
+              Spec → Plan → Estimate
             </p>
           </div>
         </div>

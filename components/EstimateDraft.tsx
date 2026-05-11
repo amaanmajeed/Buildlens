@@ -1,7 +1,7 @@
 "use client";
 
 import type { EstimateRow } from "@/lib/types";
-import { useWorkspaceState } from "@/components/workspace/WorkspaceStateProvider";
+import { useAppState } from "@/components/workspace/AppStateProvider";
 import { Icon } from "@/components/ui/Icon";
 
 function newId() {
@@ -11,7 +11,7 @@ function newId() {
 }
 
 export function EstimateDraft() {
-  const { estimateRows: rows, setEstimateRows: onChange } = useWorkspaceState();
+  const { estimateRows: rows, setEstimateRows: onChange } = useAppState();
 
   const setRow = (id: string, patch: Partial<EstimateRow>) => {
     onChange(
@@ -81,8 +81,8 @@ export function EstimateDraft() {
             Estimate Draft
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-on-surface-variant md:text-[0.9375rem]">
-            Review and refine AI-generated quantities and pricing for the
-            Terminal Expansion project.
+            SOV and plan quantities from earlier steps are listed below. Enter
+            unit prices to complete your estimate, or add rows manually.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3">
@@ -133,8 +133,9 @@ export function EstimateDraft() {
                   colSpan={6}
                   className="px-4 py-12 text-center text-on-surface-variant"
                 >
-                  Use &quot;Send to estimate draft&quot; from Plan Takeoff, or add
-                  a row manually.
+                  Use &quot;Send to Estimate Draft&quot; from Plan Takeoff (SOV
+                  lines are included even with no plan quantities), or add a row
+                  manually.
                 </td>
               </tr>
             ) : (

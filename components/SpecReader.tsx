@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
 import { MSG } from "@/lib/messages";
+import type { ProjectFile } from "@/lib/scraper";
 import type { ChatTurn, SovRow } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
+import { useAppState } from "@/components/workspace/AppStateProvider";
 import { Spinner } from "./Spinner";
 import { ProjectScraper } from "./ProjectScraper";
 
@@ -17,6 +20,8 @@ const SUGGESTIONS = [
 ];
 
 export function SpecReader() {
+  const { setSovSchedule, setSpecSourceFileId, setPortalPdfCache } =
+    useAppState();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string>("");
@@ -31,11 +36,13 @@ export function SpecReader() {
   const pickFile = () => inputRef.current?.click();
 
   const onScrapedFileReady = useCallback(
-    async (b64: string, fileName: string) => {
+    async (b64: string, fileName: string, sourceFile?: ProjectFile | null) => {
       setBanner(null);
+      setSpecSourceFileId(sourceFile?.id ?? null);
       setSovLoading(true);
       setSovReady(false);
       setSchedule([]);
+      setSovSchedule([]);
       setMessages([]);
       setPdfBase64(null);
       setFileLabel(fileName);
@@ -51,18 +58,22 @@ export function SpecReader() {
           const msg =
             typeof data.error === "string" ? data.error : MSG.aiUnavailable;
           setBanner(msg);
+          setSpecSourceFileId(null);
           return;
         }
         const rows = Array.isArray(data.schedule) ? data.schedule : [];
         setSchedule(rows);
+        setSovSchedule(rows);
         setSovReady(true);
       } catch {
         setBanner(MSG.aiUnavailable);
+        setSpecSourceFileId(null);
+        setSovSchedule([]);
       } finally {
         setSovLoading(false);
       }
     },
-    []
+    [setSovSchedule, setSpecSourceFileId]
   );
 
   const runExtract = useCallback(async (b64: string) => {
@@ -81,17 +92,21 @@ export function SpecReader() {
       const code =
         typeof data.code === "string" ? ` (${data.code})` : "";
       setBanner(msg + (process.env.NODE_ENV === "development" ? code : ""));
+      setSovSchedule([]);
       return false;
     }
     const rows = Array.isArray(data.schedule) ? data.schedule : [];
     setSchedule(rows);
+    setSovSchedule(rows);
     setSovReady(true);
     return true;
-  }, []);
+  }, [setSovSchedule]);
 
   const onFile = useCallback(
     async (f: File | null) => {
       setBanner(null);
+      setSpecSourceFileId(null);
+      setPortalPdfCache(null);
       if (!f) return;
       if (
         f.type !== "application/pdf" &&
@@ -107,6 +122,7 @@ export function SpecReader() {
       setSovLoading(true);
       setSovReady(false);
       setSchedule([]);
+      setSovSchedule([]);
       setMessages([]);
       setPdfBase64(null);
       setFileLabel(f.name);
@@ -120,7 +136,7 @@ export function SpecReader() {
         setSovLoading(false);
       }
     },
-    [runExtract]
+    [runExtract, setSpecSourceFileId, setSovSchedule, setPortalPdfCache]
   );
 
   const recalculate = async () => {
@@ -208,47 +224,25 @@ export function SpecReader() {
       id="buildlens-ai"
       className="flex min-h-[calc(100vh-4rem)] flex-col max-md:overflow-visible md:h-[calc(100vh-4rem)] md:max-h-[calc(100vh-4rem)] md:flex-row md:overflow-hidden"
     >
-      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-bright p-margin-mobile md:h-full md:min-h-0 md:flex-[0.6] md:p-margin-desktop">
-        <header className="mb-stack-lg flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
-              Spec Analysis
-            </h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-on-surface-variant">
-              Automated technical extraction for Section 03300: Cast-in-Place
-              Concrete
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={exportReport}
-              disabled={schedule.length === 0}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface shadow-sm transition-colors hover:bg-surface-variant disabled:opacity-50"
-            >
-              <Icon name="download" size="md" className="text-on-surface-variant" />
-              Export report
-            </button>
-            <button
-              type="button"
-              onClick={() => void recalculate()}
-              disabled={!pdfBase64 || sovLoading}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-50"
-            >
-              <Icon name="refresh" size="md" className="text-on-primary" />
-              Recalculate
-            </button>
-          </div>
+      <section className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-bright p-margin-mobile pb-stack-xl md:h-full md:min-h-0 md:flex-[0.6] md:p-margin-desktop md:pb-stack-xl">
+        <header className="mb-stack-lg shrink-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
+            Spec Analysis
+          </h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-on-surface-variant">
+            Automated technical extraction for Section 03300: Cast-in-Place
+            Concrete
+          </p>
         </header>
 
         {banner ? (
-          <p className="mb-4 rounded-lg border border-error/30 bg-error-container/40 px-3 py-2 text-sm text-error">
+          <p className="mb-4 shrink-0 rounded-lg border border-error/30 bg-error-container/40 px-3 py-2 text-sm text-error">
             {banner}
           </p>
         ) : null}
 
-        <div className="mb-gutter">
-          <ProjectScraper onFileReady={onScrapedFileReady} />
+        <div className="mb-gutter shrink-0">
+          <ProjectScraper onFileReady={onScrapedFileReady} lockProject />
         </div>
 
         <div className="grid grid-cols-1 gap-gutter xl:grid-cols-2">
@@ -347,6 +341,39 @@ export function SpecReader() {
               and contract terms.
             </p>
           </div>
+        </div>
+
+        <div className="relative z-0 mt-stack-lg flex shrink-0 flex-wrap gap-2 border-t border-outline-variant bg-surface-bright pt-stack-lg pb-1">
+          <button
+            type="button"
+            onClick={exportReport}
+            disabled={schedule.length === 0}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface shadow-sm transition-colors hover:bg-surface-variant disabled:opacity-50"
+          >
+            <Icon name="download" size="md" className="text-on-surface-variant" />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => void recalculate()}
+            disabled={!pdfBase64 || sovLoading}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-50"
+          >
+            <Icon name="refresh" size="md" className="text-on-primary" />
+            Recalculate
+          </button>
+          <Link
+            href="/plan-takeoff"
+            aria-disabled={!sovReady}
+            className={`inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-medium shadow-sm ring-1 ring-primary/15 transition-opacity ${
+              sovReady
+                ? "bg-primary text-on-primary hover:opacity-[0.92]"
+                : "pointer-events-none bg-outline-variant text-on-surface-variant opacity-50"
+            }`}
+          >
+            Next: Plan Takeoff
+            <Icon name="arrow_forward" size="md" />
+          </Link>
         </div>
       </section>
 

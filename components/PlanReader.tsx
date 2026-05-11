@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
 import { MSG } from "@/lib/messages";
+import type { ProjectFile } from "@/lib/scraper";
 import type { PlanQuantityRow } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
-import { useWorkspaceState } from "@/components/workspace/WorkspaceStateProvider";
+import { useAppState } from "@/components/workspace/AppStateProvider";
 import { Spinner } from "./Spinner";
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -29,11 +30,33 @@ function confidenceClass(c: string) {
   return "bg-red-50 text-red-800 ring-1 ring-red-400";
 }
 
+function looksLikePdf(fileName: string, contentType: string, base64: string) {
+  if (fileName.toLowerCase().endsWith(".pdf")) return true;
+  if (contentType.toLowerCase().includes("pdf")) return true;
+  try {
+    const head = atob(base64.slice(0, 28));
+    return head.startsWith("%PDF");
+  } catch {
+    return false;
+  }
+}
+
 export function PlanReader() {
-  const { appendFromPlan } = useWorkspaceState();
+  const {
+    sendToEstimateDraft,
+    projectFiles,
+    specSourceFileId,
+    selectedProject,
+    portalPdfCache,
+  } = useAppState();
   const fileInput = useRef<HTMLInputElement>(null);
+  const manualPdfRef = useRef(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState("");
+  const [selectedPortalFileId, setSelectedPortalFileId] = useState<
+    string | null
+  >(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [planType, setPlanType] =
     useState<(typeof PLAN_TYPES)[number]>("Paving");
   const [rows, setRows] = useState<LocalRow[]>([]);
@@ -43,10 +66,120 @@ export function PlanReader() {
 
   const pickFile = () => fileInput.current?.click();
 
+  useEffect(() => {
+    manualPdfRef.current = false;
+  }, [selectedProject?.id]);
+
+  useEffect(() => {
+    if (projectFiles.length === 0) {
+      if (!manualPdfRef.current) setSelectedPortalFileId(null);
+      return;
+    }
+    if (manualPdfRef.current) return;
+
+    const hint =
+      specSourceFileId &&
+      projectFiles.some((f) => f.id === specSourceFileId)
+        ? specSourceFileId
+        : projectFiles[0].id;
+
+    setSelectedPortalFileId((prev) => {
+      if (prev && projectFiles.some((f) => f.id === prev)) return prev;
+      return hint;
+    });
+  }, [projectFiles, specSourceFileId]);
+
+  const loadPortalPdf = useCallback(
+    async (file: ProjectFile) => {
+      setBanner(null);
+
+      if (
+        portalPdfCache?.fileId === file.id &&
+        portalPdfCache.base64
+      ) {
+        setFileLabel(portalPdfCache.fileName);
+        setPdfBase64(portalPdfCache.base64);
+        setRows([]);
+        return;
+      }
+
+      if (file.url.includes("procurement.opengov.com/portal/")) {
+        setBanner(
+          "This link opens the portal page, not a direct file. Pick another file or upload a PDF."
+        );
+        setPdfBase64(null);
+        setFileLabel("");
+        return;
+      }
+      setPortalLoading(true);
+      setPdfBase64(null);
+      setFileLabel(file.name);
+      setRows([]);
+      try {
+        const res = await fetch("/api/fetch-procurement-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: file.url }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          base64?: string;
+          fileName?: string;
+          contentType?: string;
+        };
+        if (!res.ok) {
+          setBanner(
+            typeof data.error === "string"
+              ? data.error
+              : "Could not download file."
+          );
+          setFileLabel("");
+          return;
+        }
+        const base64 = data.base64;
+        if (!base64 || typeof base64 !== "string") {
+          setBanner("Could not download file.");
+          setFileLabel("");
+          return;
+        }
+        const name =
+          (typeof data.fileName === "string" && data.fileName) || file.name;
+        const contentType =
+          (typeof data.contentType === "string" && data.contentType) || "";
+        if (!looksLikePdf(name, contentType, base64)) {
+          setBanner(MSG.pdfOnly);
+          setFileLabel("");
+          return;
+        }
+        setPdfBase64(base64);
+      } catch {
+        setBanner(MSG.aiUnavailable);
+        setFileLabel("");
+      } finally {
+        setPortalLoading(false);
+      }
+    },
+    [portalPdfCache]
+  );
+
+  useEffect(() => {
+    if (manualPdfRef.current) return;
+    if (!selectedPortalFileId || projectFiles.length === 0) return;
+    const file = projectFiles.find((f) => f.id === selectedPortalFileId);
+    if (!file) return;
+    startTransition(() => {
+      void loadPortalPdf(file);
+    });
+  }, [selectedPortalFileId, projectFiles, loadPortalPdf]);
+
   const onFile = useCallback(async (f: File | null) => {
     setBanner(null);
+    manualPdfRef.current = true;
     if (!f) return;
-    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
+    if (
+      f.type !== "application/pdf" &&
+      !f.name.toLowerCase().endsWith(".pdf")
+    ) {
       setBanner(MSG.pdfOnly);
       return;
     }
@@ -54,6 +187,7 @@ export function PlanReader() {
       setBanner(MSG.tooLarge);
       return;
     }
+    setSelectedPortalFileId(null);
     setFileLabel(f.name);
     setRows([]);
     try {
@@ -66,7 +200,7 @@ export function PlanReader() {
 
   const extract = async () => {
     if (!pdfBase64) {
-      setBanner("Upload a plan PDF first.");
+      setBanner("Choose a portal PDF or upload a plan PDF first.");
       return;
     }
     setLoading(true);
@@ -121,7 +255,7 @@ export function PlanReader() {
 
   const sendToEstimate = () => {
     if (rows.length === 0) return;
-    appendFromPlan(
+    sendToEstimateDraft(
       rows.map((r) => ({
         item: r.item,
         quantity: r.quantity,
@@ -130,46 +264,60 @@ export function PlanReader() {
     );
   };
 
+  const onPortalSelect = (fileId: string) => {
+    manualPdfRef.current = false;
+    setSelectedPortalFileId(fileId);
+  };
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col overflow-hidden md:flex-row">
-      <section className="flex min-h-[40vh] w-full flex-[0_0_auto] flex-col border-b border-outline-variant bg-white md:w-[65%] md:max-w-[65%] md:flex-initial md:border-b-0 md:border-r">
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4">
-          <div className="flex min-w-0 items-center gap-stack-sm overflow-hidden">
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
-              {fileLabel
-                ? `Sheet: ${fileLabel}`
-                : "Sheet — upload plan PDF"}
-            </span>
-            <div className="flex shrink-0 overflow-hidden rounded-lg border border-outline-variant bg-white shadow-sm">
-              <button
-                type="button"
-                className="border-r border-outline-variant px-2.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-variant"
-                aria-label="Zoom in"
-              >
-                <Icon name="zoom_in" size="sm" />
-              </button>
-              <button
-                type="button"
-                className="px-2.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-variant"
-                aria-label="Zoom out"
-              >
-                <Icon name="zoom_out" size="sm" />
-              </button>
-            </div>
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-surface-container-low">
+      <header className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
+        <h1 className="text-xl font-semibold tracking-tight text-primary md:text-2xl">
+          Plan Takeoff
+        </h1>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          Select a plan PDF from the project list (same as Spec Analysis), or
+          upload manually. Extract quantities, then send to Estimate Draft.
+        </p>
+      </header>
+
+      <div className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
+        {banner ? (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              banner === MSG.noQuantities
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-error/30 bg-error-container/40 text-error"
+            }`}
+          >
+            {banner}
           </div>
-        </div>
-        <div className="blueprint-canvas flex min-h-[200px] flex-1 flex-col items-center justify-center gap-6 p-margin-mobile md:p-8">
-          {banner ? (
-            <div
-              className={`mx-auto max-w-md rounded-lg border px-4 py-3 text-sm ${
-                banner === MSG.noQuantities
-                  ? "border-amber-200 bg-amber-50 text-amber-900"
-                  : "border-error/30 bg-error-container/40 text-error"
-              }`}
-            >
-              {banner}
-            </div>
-          ) : null}
+        ) : null}
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+          {projectFiles.length > 0 ? (
+            <label className="flex min-w-[200px] flex-1 flex-col gap-1.5 text-sm font-medium text-on-surface-variant">
+              Plan PDF from portal
+              <select
+                value={selectedPortalFileId ?? ""}
+                onChange={(e) => onPortalSelect(e.target.value)}
+                className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {projectFiles.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                    {f.id === specSourceFileId ? " (spec file)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="text-sm text-on-surface-variant">
+              No portal files in context — use Spec Analysis from a project
+              first, or upload a PDF below.
+            </p>
+          )}
+
           <input
             ref={fileInput}
             type="file"
@@ -177,143 +325,153 @@ export function PlanReader() {
             className="hidden"
             onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
           />
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-center text-sm text-on-surface-variant">
-              Upload drawing sheet PDF and extract quantities for takeoff
-              review.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={pickFile}
-                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92]"
-              >
-                Upload plan PDF
-              </button>
-              <label className="flex items-center gap-2 text-sm font-medium text-on-surface-variant">
-                Type
-                <select
-                  value={planType}
-                  onChange={(e) =>
-                    setPlanType(e.target.value as (typeof PLAN_TYPES)[number])
-                  }
-                  className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  {PLAN_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={() => void extract()}
-                disabled={loading || !pdfBase64}
-                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92] disabled:opacity-50"
-              >
-                Extract quantities
-              </button>
-            </div>
-            {loading ? <Spinner label="Analyzing drawing…" /> : null}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex min-h-[40vh] flex-1 flex-col overflow-hidden bg-surface-container-low">
-        <header className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
-          <h2 className="text-lg font-semibold tracking-tight text-primary">
-            Quantity review
-          </h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Edit quantities, then push to Estimate Draft.
-          </p>
-        </header>
-        <div className="min-h-0 flex-1 overflow-auto p-margin-mobile pb-8 md:p-margin-desktop">
-          <div className="shadow-buildlens overflow-hidden rounded-lg border border-outline-variant bg-white">
-            <table className="min-w-full text-left text-sm">
-              <thead className="sticky top-0 z-[1] border-b border-outline-variant bg-surface-container-low">
-                <tr className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                  <th className="px-4 py-3">Item</th>
-                  <th className="px-4 py-3">Quantity</th>
-                  <th className="px-4 py-3">Unit</th>
-                  <th className="px-4 py-3">Confidence</th>
-                  <th className="px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant">
-                {rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-10 text-center text-on-surface-variant"
-                    >
-                      {loading ? " " : "Extract quantities to see line items."}
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r, i) => (
-                    <tr
-                      key={r.id}
-                      className={i % 2 === 1 ? "bg-primary/[0.02]" : ""}
-                    >
-                      <td className="px-4 py-3 text-on-surface">{r.item}</td>
-                      <td className="px-4 py-3 font-mono text-on-surface">
-                        {editingId === r.id ? (
-                          <input
-                            type="number"
-                            className="w-28 rounded border border-outline-variant px-2 py-1"
-                            value={r.quantity}
-                            onChange={(e) =>
-                              updateQuantity(
-                                r.id,
-                                Number.parseFloat(e.target.value) || 0
-                              )
-                            }
-                            onBlur={() => setEditingId(null)}
-                            autoFocus
-                          />
-                        ) : (
-                          r.quantity
-                        )}
-                      </td>
-                      <td className="px-4 py-3">{r.unit}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${confidenceClass(r.confidence)}`}
-                        >
-                          {r.confidence}
-                        </span>
-                        {r.notes ? (
-                          <span className="ml-2 text-xs text-on-surface-variant">
-                            {r.notes}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-primary hover:underline"
-                          onClick={() => setEditingId(r.id)}
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
           <button
             type="button"
-            onClick={sendToEstimate}
-            disabled={rows.length === 0}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-40 md:w-auto"
+            onClick={pickFile}
+            className="inline-flex h-10 items-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-variant"
           >
-            Send to estimate draft
+            Upload plan PDF
+          </button>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-on-surface-variant">
+            Drawing type
+            <select
+              value={planType}
+              onChange={(e) =>
+                setPlanType(e.target.value as (typeof PLAN_TYPES)[number])
+              }
+              className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              {PLAN_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            onClick={() => void extract()}
+            disabled={loading || !pdfBase64 || portalLoading}
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92] disabled:opacity-50"
+          >
+            Extract quantities
           </button>
         </div>
+
+        {fileLabel ? (
+          <p className="mt-3 text-xs text-on-surface-variant">
+            Active sheet: <span className="font-medium text-on-surface">{fileLabel}</span>
+          </p>
+        ) : null}
+        {portalLoading ? (
+          <div className="mt-3">
+            <Spinner label="Downloading PDF from portal…" />
+          </div>
+        ) : null}
+        {loading ? (
+          <div className="mt-3">
+            <Spinner label="Analyzing drawing…" />
+          </div>
+        ) : null}
+      </div>
+
+      <section className="flex flex-1 flex-col px-margin-mobile py-6 md:px-margin-desktop">
+        <h2 className="text-lg font-semibold tracking-tight text-primary">
+          Quantity review
+        </h2>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          Edit quantities, then send SOV and plan lines to Estimate Draft.
+        </p>
+
+        <div className="shadow-buildlens mt-4 overflow-hidden rounded-lg border border-outline-variant bg-white">
+          <table className="min-w-full text-left text-sm">
+            <thead className="sticky top-0 z-[1] border-b border-outline-variant bg-surface-container-low">
+              <tr className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3">Quantity</th>
+                <th className="px-4 py-3">Unit</th>
+                <th className="px-4 py-3">Confidence</th>
+                <th className="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant">
+              {rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-on-surface-variant"
+                  >
+                    {loading
+                      ? " "
+                      : "Extract quantities to see plan line items (SOV lines are added when you send to Estimate Draft)."}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r, i) => (
+                  <tr
+                    key={r.id}
+                    className={i % 2 === 1 ? "bg-primary/[0.02]" : ""}
+                  >
+                    <td className="px-4 py-3 text-on-surface">{r.item}</td>
+                    <td className="px-4 py-3 font-mono text-on-surface">
+                      {editingId === r.id ? (
+                        <input
+                          type="number"
+                          className="w-28 rounded border border-outline-variant px-2 py-1"
+                          value={r.quantity}
+                          onChange={(e) =>
+                            updateQuantity(
+                              r.id,
+                              Number.parseFloat(e.target.value) || 0
+                            )
+                          }
+                          onBlur={() => setEditingId(null)}
+                          autoFocus
+                        />
+                      ) : (
+                        r.quantity
+                      )}
+                    </td>
+                    <td className="px-4 py-3">{r.unit}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${confidenceClass(r.confidence)}`}
+                      >
+                        {r.confidence}
+                      </span>
+                      {r.notes ? (
+                        <span className="ml-2 text-xs text-on-surface-variant">
+                          {r.notes}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary hover:underline"
+                        onClick={() => setEditingId(r.id)}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <button
+          type="button"
+          onClick={sendToEstimate}
+          disabled={rows.length === 0}
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-40"
+        >
+          Send to Estimate Draft
+          <Icon name="arrow_forward" size="sm" />
+        </button>
       </section>
     </div>
   );
