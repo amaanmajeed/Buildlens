@@ -123,6 +123,7 @@ export function ProjectScraper({ onFileReady }: Props) {
 
   const rejectFile = useCallback(() => {
     setAiSelectedFile(null);
+    setProcessMsg("");
     setStep("select-file");
   }, []);
 
