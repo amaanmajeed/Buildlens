@@ -2,14 +2,26 @@
 
 import { useCallback, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { MSG } from "@/lib/messages";
 import { Spinner } from "./Spinner";
 import type { PortalProject, ProjectFile } from "@/lib/scraper";
 
-type Step = "idle" | "loading-projects" | "select-project" | "loading-files" | "select-file" | "confirm-file" | "processing" | "download-prompt";
+type Step = "idle" | "loading-projects" | "select-project" | "loading-files" | "select-file" | "confirm-file" | "processing";
 
 type Props = {
   onFileReady: (pdfBase64: string, fileName: string) => void;
 };
+
+function looksLikePdf(fileName: string, contentType: string, base64: string) {
+  if (fileName.toLowerCase().endsWith(".pdf")) return true;
+  if (contentType.toLowerCase().includes("pdf")) return true;
+  try {
+    const head = atob(base64.slice(0, 28));
+    return head.startsWith("%PDF");
+  } catch {
+    return false;
+  }
+}
 
 export function ProjectScraper({ onFileReady }: Props) {
   const [step, setStep] = useState<Step>("idle");
@@ -94,30 +106,61 @@ export function ProjectScraper({ onFileReady }: Props) {
   const confirmFile = useCallback(async (file: ProjectFile) => {
     setError(null);
     setStep("processing");
-    setProcessMsg("Preparing file for analysis...");
+    setProcessMsg("Downloading file for analysis...");
 
     if (file.url.includes("procurement.opengov.com/portal/")) {
       setProcessMsg("");
-      setStep("download-prompt");
+      setError(
+        "This link opens the portal page, not a direct file. Pick another file in the list or upload a PDF below."
+      );
+      setStep("confirm-file");
       return;
     }
 
     try {
-      const res = await fetch(file.url);
-      if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("pdf") && !contentType.includes("octet")) {
-        setStep("download-prompt");
+      const res = await fetch("/api/fetch-procurement-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: file.url }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        base64?: string;
+        fileName?: string;
+        contentType?: string;
+      };
+      if (!res.ok) {
+        setProcessMsg("");
+        setError(
+          typeof data.error === "string" ? data.error : "Could not download file."
+        );
+        setStep("confirm-file");
         return;
       }
-      const blob = await res.blob();
-      const buffer = await blob.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
-      onFileReady(base64, file.name);
+      const base64 = data.base64;
+      if (!base64 || typeof base64 !== "string") {
+        setProcessMsg("");
+        setError("Could not download file.");
+        setStep("confirm-file");
+        return;
+      }
+      const name =
+        (typeof data.fileName === "string" && data.fileName) || file.name;
+      const contentType =
+        (typeof data.contentType === "string" && data.contentType) || "";
+      if (!looksLikePdf(name, contentType, base64)) {
+        setProcessMsg("");
+        setError(MSG.pdfOnly);
+        setStep("select-file");
+        return;
+      }
+      onFileReady(base64, name);
+      setStep("idle");
+      setProcessMsg("");
     } catch {
-      setStep("download-prompt");
+      setProcessMsg("");
+      setError(MSG.aiUnavailable);
+      setStep("confirm-file");
     }
   }, [onFileReady]);
 
@@ -293,32 +336,6 @@ export function ProjectScraper({ onFileReady }: Props) {
       )}
 
       {step === "processing" && <Spinner label={processMsg} />}
-
-      {step === "download-prompt" && aiSelectedFile && (
-        <div className="space-y-3">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <p className="text-xs font-medium text-amber-800">
-              File identified — download from portal:
-            </p>
-            <p className="mt-1 text-sm font-medium text-on-surface">
-              {aiSelectedFile.name}
-            </p>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Download this file from the procurement portal, then use the
-              &quot;Upload spec PDF&quot; button below to process it.
-            </p>
-          </div>
-          <a
-            href={aiSelectedFile.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary hover:opacity-90"
-          >
-            <Icon name="open_in_new" size="sm" />
-            Open Project on Portal
-          </a>
-        </div>
-      )}
     </div>
   );
 }

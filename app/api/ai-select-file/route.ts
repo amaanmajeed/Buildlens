@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ProjectFile } from "@/lib/scraper";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3-flash-preview";
 
 const PROMPT = `You are a construction estimating assistant. Given a list of files from a procurement project, select the SINGLE file most likely to contain the technical specifications or Schedule of Values (SOV) for construction bidding. Prefer PDFs with names suggesting specs, bid schedules, scope of work, or technical requirements.
 
