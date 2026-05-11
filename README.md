@@ -10,6 +10,19 @@ GEMINI_API_KEY=your_key_from_google_ai_studio
 
 Optional equivalent: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
 
+## Gemini models
+
+These API ids work with `@google/generative-ai` (`getGenerativeModel({ model })`). Defaults in code are `lib/gemini.ts` and `app/api/ai-select-file/route.ts`; swap the `MODEL` constant to rotate when testing or if a model hits quota.
+
+| Display name | Model id |
+| --- | --- |
+| Gemini 2.5 Flash | `gemini-2.5-flash` |
+| Gemini 3 Flash | `gemini-3-flash-preview` |
+| Gemini 2.5 Flash Lite | `gemini-2.5-flash-lite` |
+| Gemini 3.1 Flash Lite | `gemini-3.1-flash-lite` |
+
+Confirm availability for your key in [Google AI Studio](https://aistudio.google.com); preview ids can change when models go stable.
+
 ## Debugging AI errors
 
 The UI shows a plain-English `error` message. In **development**, failed API responses also include a `code` (e.g. `GEMINI_AUTH`, `GEMINI_PAYLOAD_LIMIT`) and a `debug` object with the upstream status and message—open DevTools → Network → select the failed `POST` → Response.
