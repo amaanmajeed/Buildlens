@@ -2,6 +2,7 @@ import { generatePdfText } from "@/lib/gemini";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
 import { MSG } from "@/lib/messages";
 import { parseJsonArray } from "@/lib/parseJson";
+import { demoFallbacksEnabled, demoPlanRows } from "@/lib/demoFallbacks";
 import type { PlanQuantityRow } from "@/lib/types";
 
 const PLAN_TYPES = new Set([
@@ -47,6 +48,9 @@ export async function POST(request: Request) {
     }
     const pt =
       planType && PLAN_TYPES.has(planType) ? planType : "Other";
+    if (demoFallbacksEnabled()) {
+      return Response.json({ quantities: demoPlanRows(pt) });
+    }
 
     const raw = await generatePdfText(pdfBase64, planPrompt(pt));
     let rows: PlanQuantityRow[];
