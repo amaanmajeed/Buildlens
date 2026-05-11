@@ -6,6 +6,7 @@ import { MSG } from "@/lib/messages";
 import type { ChatTurn, SovRow } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
 import { Spinner } from "./Spinner";
+import { ProjectScraper } from "./ProjectScraper";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -28,6 +29,41 @@ export function SpecReader() {
   const [banner, setBanner] = useState<string | null>(null);
 
   const pickFile = () => inputRef.current?.click();
+
+  const onScrapedFileReady = useCallback(
+    async (b64: string, fileName: string) => {
+      setBanner(null);
+      setSovLoading(true);
+      setSovReady(false);
+      setSchedule([]);
+      setMessages([]);
+      setPdfBase64(null);
+      setFileLabel(fileName);
+      setPdfBase64(b64);
+      try {
+        const res = await fetch("/api/spec-extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pdfBase64: b64 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg =
+            typeof data.error === "string" ? data.error : MSG.aiUnavailable;
+          setBanner(msg);
+          return;
+        }
+        const rows = Array.isArray(data.schedule) ? data.schedule : [];
+        setSchedule(rows);
+        setSovReady(true);
+      } catch {
+        setBanner(MSG.aiUnavailable);
+      } finally {
+        setSovLoading(false);
+      }
+    },
+    []
+  );
 
   const runExtract = useCallback(async (b64: string) => {
     const res = await fetch("/api/spec-extract", {
@@ -210,6 +246,10 @@ export function SpecReader() {
             {banner}
           </p>
         ) : null}
+
+        <div className="mb-gutter">
+          <ProjectScraper onFileReady={onScrapedFileReady} />
+        </div>
 
         <div className="grid grid-cols-1 gap-gutter xl:grid-cols-2">
           <div className="shadow-buildlens rounded-lg border border-outline-variant bg-white p-6">
