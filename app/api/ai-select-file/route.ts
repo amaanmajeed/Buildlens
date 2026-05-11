@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  GEMINI_MODELS,
+  isGeminiModelFallbackError,
+} from "@/lib/gemini";
 import type { ProjectFile } from "@/lib/scraper";
-
-const MODEL = "gemini-2.5-flash";
 
 const PROMPT = `You are a construction estimating assistant. Given a list of files from a procurement project, select the SINGLE file most likely to contain the technical specifications or Schedule of Values (SOV) for construction bidding. Prefer PDFs with names suggesting specs, bid schedules, scope of work, or technical requirements.
 
@@ -44,13 +46,29 @@ export async function POST(request: Request) {
       : "";
 
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: MODEL });
-    const result = await model.generateContent(
-      PROMPT + contextLine + fileList
-    );
-    const text = result.response.text();
+    let resultText = "";
+    let lastError: unknown;
 
-    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(
+          PROMPT + contextLine + fileList
+        );
+        resultText = result.response.text();
+        break;
+      } catch (err) {
+        lastError = err;
+        if (!isGeminiModelFallbackError(err)) throw err;
+        if (process.env.NODE_ENV === "development") {
+          console.warn(`[ai-select-file] ${modelName} unavailable; trying fallback`, err);
+        }
+      }
+    }
+
+    if (!resultText && lastError) throw lastError;
+
+    const jsonMatch = resultText.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) {
       return Response.json(
         { error: "AI returned invalid format" },
