@@ -5,13 +5,12 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 
 const items = [
-  { href: "/documents", icon: "description", label: "Documents" },
   { href: "/spec-analysis", icon: "analytics", label: "Spec Analysis" },
   { href: "/plan-takeoff", icon: "architecture", label: "Plan Takeoff" },
   { href: "/estimate-draft", icon: "request_quote", label: "Estimate Draft" },
 ] as const;
 
-export function SideNav({ onRunAi }: { onRunAi?: () => void }) {
+export function SideNav() {
   const pathname = usePathname() ?? "";
 
   return (
@@ -55,32 +54,6 @@ export function SideNav({ onRunAi }: { onRunAi?: () => void }) {
           );
         })}
       </nav>
-      <div className="mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4">
-        <button
-          type="button"
-          onClick={onRunAi}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92]"
-        >
-          <Icon name="bolt" size="md" className="text-white" />
-          Run BuildLens AI
-        </button>
-        <a
-          href="#"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-on-surface-variant transition-colors hover:bg-white/60"
-          onClick={(e) => e.preventDefault()}
-        >
-          <Icon name="help" size="md" />
-          Support
-        </a>
-        <a
-          href="#"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-on-surface-variant transition-colors hover:bg-white/60"
-          onClick={(e) => e.preventDefault()}
-        >
-          <Icon name="archive" size="md" />
-          Archive
-        </a>
-      </div>
     </aside>
   );
 }

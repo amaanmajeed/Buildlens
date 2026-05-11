@@ -2,7 +2,7 @@ import { fetchTopProjects } from "@/lib/scraper";
 
 export async function GET() {
   try {
-    const projects = await fetchTopProjects(5);
+    const projects = await fetchTopProjects(25);
     return Response.json({ projects });
   } catch (e) {
     const message =
