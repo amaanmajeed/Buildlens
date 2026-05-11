@@ -88,13 +88,6 @@ export function EstimateDraft() {
         <div className="flex flex-wrap gap-2 md:gap-3">
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-container"
-          >
-            <Icon name="history" size="md" className="text-primary" />
-            Version history
-          </button>
-          <button
-            type="button"
             onClick={exportCsv}
             disabled={rows.length === 0}
             className="shadow-buildlens inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 hover:opacity-[0.92] disabled:opacity-50"
