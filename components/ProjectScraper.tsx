@@ -290,7 +290,7 @@ export function ProjectScraper({
           Choose an open bid on Opportunities to load this project&apos;s files.
         </p>
         <Link
-          href="/opportunities"
+          href="/"
           className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-on-primary"
         >
           Go to Opportunities
