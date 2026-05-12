@@ -186,7 +186,7 @@ export function SpecReader() {
   const sendQuestion = async (e?: React.FormEvent, qOverride?: string) => {
     e?.preventDefault();
     const q = (qOverride ?? question).trim();
-    if (!pdfBase64 || !sovReady || chatLoading || !q) return;
+    if (!pdfBase64 || chatLoading || !q) return;
     setChatLoading(true);
     setBanner(null);
     try {
@@ -398,7 +398,7 @@ export function SpecReader() {
               <button
                 key={s}
                 type="button"
-                disabled={!sovReady || chatLoading}
+                disabled={!pdfBase64 || chatLoading}
                 onClick={() => void sendQuestion(undefined, s)}
                 className="rounded-full border border-outline-variant/30 bg-surface-container-high px-3.5 py-2 text-left text-xs font-medium leading-snug text-on-surface transition-colors hover:bg-surface-variant disabled:opacity-50"
               >
@@ -451,12 +451,12 @@ export function SpecReader() {
               className="w-full rounded-xl border border-outline-variant bg-surface-container-low py-3 pl-4 pr-12 text-sm text-on-surface transition-all placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Ask about technical specs, risk, or dates…"
               value={question}
-              disabled={!sovReady || chatLoading}
+              disabled={!pdfBase64 || chatLoading}
               onChange={(e) => setQuestion(e.target.value)}
             />
             <button
               type="submit"
-              disabled={!sovReady || chatLoading || !question.trim()}
+              disabled={!pdfBase64 || chatLoading || !question.trim()}
               className="absolute right-2 inline-flex size-9 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
               aria-label="Send"
             >
