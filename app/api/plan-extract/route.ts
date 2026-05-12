@@ -1,5 +1,6 @@
 import { generatePdfText } from "@/lib/gemini";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
+import { parseGeminiModelId } from "@/lib/geminiModels";
 import { MSG } from "@/lib/messages";
 import { parseJsonArray } from "@/lib/parseJson";
 import type { PlanQuantityRow } from "@/lib/types";
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
     const pt =
       planType && PLAN_TYPES.has(planType) ? planType : "Other";
 
-    const raw = await generatePdfText(pdfBase64, planPrompt(pt));
+    const model = parseGeminiModelId(body?.model);
+    const raw = await generatePdfText(pdfBase64, planPrompt(pt), model);
     let rows: PlanQuantityRow[];
     try {
       rows = parseJsonArray<PlanQuantityRow>(raw);

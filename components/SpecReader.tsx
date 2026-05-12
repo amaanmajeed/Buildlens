@@ -20,7 +20,7 @@ const SUGGESTIONS = [
 ];
 
 export function SpecReader() {
-  const { setSovSchedule, setSpecSourceFileId, setPortalPdfCache } =
+  const { setSovSchedule, setSpecSourceFileId, setPortalPdfCache, geminiModel } =
     useAppState();
   const inputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export function SpecReader() {
         const res = await fetch("/api/spec-extract", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pdfBase64: b64 }),
+          body: JSON.stringify({ pdfBase64: b64, model: geminiModel }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -74,14 +74,14 @@ export function SpecReader() {
         setSovLoading(false);
       }
     },
-    [setSovSchedule, setSpecSourceFileId]
+    [setSovSchedule, setSpecSourceFileId, geminiModel]
   );
 
   const runExtract = useCallback(async (b64: string) => {
     const res = await fetch("/api/spec-extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pdfBase64: b64 }),
+      body: JSON.stringify({ pdfBase64: b64, model: geminiModel }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -101,7 +101,7 @@ export function SpecReader() {
     setSovSchedule(rows);
     setSovReady(true);
     return true;
-  }, [setSovSchedule]);
+  }, [setSovSchedule, geminiModel]);
 
   const onFile = useCallback(
     async (f: File | null) => {
@@ -197,6 +197,7 @@ export function SpecReader() {
           pdfBase64,
           question: q,
           history: messages,
+          model: geminiModel,
         }),
       });
       const data = await res.json().catch(() => ({}));

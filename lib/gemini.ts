@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const MODEL = "gemini-2.5-flash";
+import { DEFAULT_GEMINI_MODEL, parseGeminiModelId } from "@/lib/geminiModels";
 
 function getGeminiApiKey(): string | undefined {
   const raw =
@@ -11,14 +10,16 @@ function getGeminiApiKey(): string | undefined {
 
 export async function generatePdfText(
   pdfBase64: string,
-  textPrompt: string
+  textPrompt: string,
+  modelId: unknown = DEFAULT_GEMINI_MODEL
 ): Promise<string> {
   const key = getGeminiApiKey();
   if (!key) {
     throw new Error("missing_api_key");
   }
+  const modelName = parseGeminiModelId(modelId);
   const genAI = new GoogleGenerativeAI(key);
-  const model = genAI.getGenerativeModel({ model: MODEL });
+  const model = genAI.getGenerativeModel({ model: modelName });
   const result = await model.generateContent([
     {
       inlineData: {
