@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { MSG } from "@/lib/messages";
 import { useAppState } from "@/components/workspace/AppStateProvider";
@@ -51,7 +51,13 @@ export function ProjectScraper({
     projectFiles,
     portalPdfCache,
     setPortalPdfCache,
+    geminiModel,
   } = useAppState();
+
+  const geminiModelRef = useRef(geminiModel);
+  useEffect(() => {
+    geminiModelRef.current = geminiModel;
+  }, [geminiModel]);
 
   const [step, setStep] = useState<Step>("idle");
   const [projects, setProjects] = useState<PortalProject[]>([]);
@@ -122,6 +128,7 @@ export function ProjectScraper({
           body: JSON.stringify({
             files: list,
             projectTitle: project.title,
+            model: geminiModelRef.current,
           }),
         });
         const aiData = await aiRes.json();

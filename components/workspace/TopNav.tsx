@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { GEMINI_MODEL_OPTIONS, parseGeminiModelId } from "@/lib/geminiModels";
+import { useAppState } from "@/components/workspace/AppStateProvider";
 
 function NavLink({
   href,
@@ -34,6 +36,7 @@ export function TopNav({
   insightsActive?: boolean;
 }) {
   const pathname = usePathname() ?? "";
+  const { geminiModel, setGeminiModel } = useAppState();
   const opportunitiesActive =
     pathname === "/" ||
     pathname === "/opportunities" ||
@@ -63,7 +66,25 @@ export function TopNav({
           </NavLink>
         </nav>
       </div>
-      <div className="flex items-center gap-stack-md">
+      <div className="flex min-w-0 max-w-[55vw] items-center gap-stack-sm md:max-w-none md:gap-stack-md">
+        <label htmlFor="gemini-model" className="sr-only">
+          Gemini model
+        </label>
+        <select
+          id="gemini-model"
+          value={geminiModel}
+          onChange={(e) =>
+            setGeminiModel(parseGeminiModelId(e.target.value))
+          }
+          className="min-w-0 max-w-[10.5rem] shrink truncate rounded-lg border border-outline-variant bg-background px-2 py-1.5 text-xs text-on-surface shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:max-w-[14rem] md:text-sm"
+          aria-label="Gemini model"
+        >
+          {GEMINI_MODEL_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           aria-label="Notifications"

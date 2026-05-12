@@ -16,10 +16,12 @@ These API ids work with `@google/generative-ai` (`getGenerativeModel({ model })`
 
 | Display name | Model id |
 | --- | --- |
-| Gemini 2.5 Flash | `gemini-2.5-flash` |
-| Gemini 3 Flash | `gemini-3-flash-preview` |
-| Gemini 2.5 Flash Lite | `gemini-2.5-flash-lite` |
-| Gemini 3.1 Flash Lite | `gemini-3.1-flash-lite` |
+| Gemini 2.5 Flash         | `gemini-2.5-flash`         |
+| Gemini 2.5 Flash‑Lite    | `gemini-2.5-flash-lite`    |
+| Gemini 3 Flash           | `gemini-3-flash-preview`   |
+| Gemini 3.1 Flash         | `gemini-3.1-flash`         |
+| Gemini 3.1 Flash‑Lite    | `gemini-3.1-flash-lite`    |
+
 
 Confirm availability for your key in [Google AI Studio](https://aistudio.google.com); preview ids can change when models go stable.
 

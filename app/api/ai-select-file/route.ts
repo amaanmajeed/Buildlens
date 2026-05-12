@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseGeminiModelId } from "@/lib/geminiModels";
 import type { ProjectFile } from "@/lib/scraper";
-
-const MODEL = "gemini-3.1-flash-lite";
 
 const PROMPT = `You are a construction estimating assistant. Given a list of files from a procurement project, select the SINGLE file most likely to contain the technical specifications or Schedule of Values (SOV) for construction bidding. Prefer PDFs with names suggesting specs, bid schedules, scope of work, or technical requirements.
 
@@ -44,7 +43,8 @@ export async function POST(request: Request) {
       : "";
 
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: MODEL });
+    const modelId = parseGeminiModelId(body?.model);
+    const model = genAI.getGenerativeModel({ model: modelId });
     const result = await model.generateContent(
       PROMPT + contextLine + fileList
     );

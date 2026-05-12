@@ -1,5 +1,6 @@
 import { generatePdfText } from "@/lib/gemini";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
+import { parseGeminiModelId } from "@/lib/geminiModels";
 import { MSG } from "@/lib/messages";
 import { parseJsonArray } from "@/lib/parseJson";
 import type { SovRow } from "@/lib/types";
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid request." }, { status: 400 });
     }
 
-    const raw = await generatePdfText(pdfBase64, SOV_PROMPT);
+    const model = parseGeminiModelId(body?.model);
+    const raw = await generatePdfText(pdfBase64, SOV_PROMPT, model);
     let rows: SovRow[];
     try {
       rows = parseJsonArray<SovRow>(raw);

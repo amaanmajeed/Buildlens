@@ -1,5 +1,6 @@
 import { generatePdfText } from "@/lib/gemini";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
+import { parseGeminiModelId } from "@/lib/geminiModels";
 import type { ChatTurn } from "@/lib/types";
 
 function buildChatPrompt(
@@ -41,7 +42,8 @@ export async function POST(request: Request) {
       Array.isArray(history) ? history : [],
       question.trim()
     );
-    const answer = await generatePdfText(pdfBase64, prompt);
+    const model = parseGeminiModelId(body?.model);
+    const answer = await generatePdfText(pdfBase64, prompt, model);
     return Response.json({ answer: answer.trim() });
   } catch (e) {
     return geminiErrorResponse(e, "api/spec-chat");

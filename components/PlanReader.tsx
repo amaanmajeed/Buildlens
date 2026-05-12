@@ -48,6 +48,7 @@ export function PlanReader() {
     specSourceFileId,
     selectedProject,
     portalPdfCache,
+    geminiModel,
   } = useAppState();
   const fileInput = useRef<HTMLInputElement>(null);
   const manualPdfRef = useRef(false);
@@ -210,7 +211,7 @@ export function PlanReader() {
       const res = await fetch("/api/plan-extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdfBase64, planType }),
+        body: JSON.stringify({ pdfBase64, planType, model: geminiModel }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
