@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
 import { MSG } from "@/lib/messages";
 import type { ProjectFile } from "@/lib/scraper";
@@ -23,6 +23,7 @@ export function SpecReader() {
   const { setSovSchedule, setSpecSourceFileId, setPortalPdfCache } =
     useAppState();
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string>("");
   const [sovLoading, setSovLoading] = useState(false);
@@ -176,6 +177,12 @@ export function SpecReader() {
     URL.revokeObjectURL(url);
   };
 
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, chatLoading]);
+
   const sendQuestion = async (e?: React.FormEvent, qOverride?: string) => {
     e?.preventDefault();
     const q = (qOverride ?? question).trim();
@@ -245,8 +252,8 @@ export function SpecReader() {
           <ProjectScraper onFileReady={onScrapedFileReady} lockProject />
         </div>
 
-        <div className="grid grid-cols-1 gap-gutter xl:grid-cols-2">
-          <div className="shadow-buildlens rounded-lg border border-outline-variant bg-white p-6">
+        <div className="grid grid-cols-1 gap-gutter">
+          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-white p-6">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <input
                 ref={inputRef}
@@ -328,7 +335,7 @@ export function SpecReader() {
             </div>
           </div>
 
-          <div className="shadow-buildlens rounded-lg border border-outline-variant bg-white p-6 xl:col-span-2">
+          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-white p-6">
             <div className="mb-4 flex items-center gap-2.5">
               <Icon name="info" size="md" className="text-primary" />
               <h3 className="text-lg font-semibold tracking-tight text-primary">
@@ -400,7 +407,10 @@ export function SpecReader() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-stack-lg overflow-y-auto p-stack-lg">
+        <div
+          ref={chatScrollRef}
+          className="min-h-0 flex-1 space-y-stack-lg overflow-y-auto p-stack-lg"
+        >
           {messages.length === 0 ? (
             <p className="text-sm text-on-surface-variant">
               Ask about materials, sections, schedule, or payment terms.
