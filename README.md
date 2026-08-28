@@ -6,9 +6,13 @@ Create `.env.local` in this folder with:
 
 ```bash
 GEMINI_API_KEY=your_key_from_google_ai_studio
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-Optional equivalent: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
+Optional equivalent for Gemini: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
+
+Apply the SQL in `supabase/schema.sql` in the Supabase SQL editor (File Search IDs, workspace snapshots, estimate drafts, multi-tab chats).
 
 ## Gemini models
 

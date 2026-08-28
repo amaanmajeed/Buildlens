@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   startTransition,
   type ReactNode,
@@ -92,6 +93,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [geminiModel, setGeminiModel] = useState<GeminiModelId>(
     DEFAULT_GEMINI_MODEL
   );
+  const [estimateHydrated, setEstimateHydrated] = useState(false);
+  const estimateSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const p = readStoredJson<PortalProject>(STORAGE_PROJECT);
@@ -108,6 +111,70 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setHydrated(true);
     });
   }, []);
+
+  // Load estimate draft from Supabase when project changes.
+  useEffect(() => {
+    if (!hydrated) return;
+    const projectId = selectedProject?.id;
+    let cancelled = false;
+
+    (async () => {
+      if (!projectId) {
+        if (!cancelled) {
+          startTransition(() => {
+            setEstimateRows([]);
+            setEstimateHydrated(true);
+          });
+        }
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/workspace/estimate?projectId=${projectId}`
+        );
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        startTransition(() => {
+          if (res.ok && Array.isArray(data.estimateRows)) {
+            setEstimateRows(data.estimateRows);
+          } else {
+            setEstimateRows([]);
+          }
+          setEstimateHydrated(true);
+        });
+      } catch {
+        if (!cancelled) {
+          startTransition(() => {
+            setEstimateRows([]);
+            setEstimateHydrated(true);
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProject?.id, hydrated]);
+
+  // Debounced save of estimate rows (includes unit prices).
+  useEffect(() => {
+    if (!hydrated || !estimateHydrated || !selectedProject) return;
+    if (estimateSaveTimer.current) clearTimeout(estimateSaveTimer.current);
+    estimateSaveTimer.current = setTimeout(() => {
+      void fetch("/api/workspace/estimate", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          projectTitle: selectedProject.title,
+          estimateRows,
+        }),
+      });
+    }, 500);
+    return () => {
+      if (estimateSaveTimer.current) clearTimeout(estimateSaveTimer.current);
+    };
+  }, [estimateRows, selectedProject, hydrated, estimateHydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
@@ -171,6 +238,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setSovSchedule([]);
     setSpecSourceFileId(null);
     setPortalPdfCache(null);
+    // Estimate loads from Supabase for the new project id via effect.
   }, []);
 
   const appendFromPlan = useCallback(

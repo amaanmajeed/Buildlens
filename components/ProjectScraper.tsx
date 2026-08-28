@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { makeFileKey } from "@/lib/fileKey";
 import { MSG } from "@/lib/messages";
+import type { FileReadyPayload } from "@/lib/workspaceTypes";
 import { useAppState } from "@/components/workspace/AppStateProvider";
 import { Spinner } from "./Spinner";
 import type { PortalProject, ProjectFile } from "@/lib/scraper";
@@ -19,13 +21,15 @@ type Step =
   | "processing";
 
 type Props = {
-  onFileReady: (
-    pdfBase64: string,
-    fileName: string,
-    sourceFile?: ProjectFile | null
-  ) => void;
+  onFileReady: (payload: FileReadyPayload) => void;
   /** When true: no project browse; files only from current context (Spec / guided flow). */
   lockProject?: boolean;
+};
+
+type IndexedDoc = {
+  fileKey: string;
+  fileName: string;
+  storeName: string;
 };
 
 function looksLikePdf(fileName: string, contentType: string, base64: string) {
@@ -69,6 +73,7 @@ export function ProjectScraper({
   const [error, setError] = useState<string | null>(null);
   const [processMsg, setProcessMsg] = useState("");
   const [aiPicking, setAiPicking] = useState(false);
+  const [indexedDocs, setIndexedDocs] = useState<IndexedDoc[]>([]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -83,9 +88,25 @@ export function ProjectScraper({
       setProcessMsg("");
       setAiPicking(false);
       setProjectFiles([]);
+      setIndexedDocs([]);
       setStep("loading-files");
 
       const project = selectedProject;
+
+      let known: IndexedDoc[] = [];
+      try {
+        const knownRes = await fetch(
+          `/api/file-search/docs?projectId=${project.id}`
+        );
+        if (knownRes.ok) {
+          const knownData = await knownRes.json();
+          known = Array.isArray(knownData.docs) ? knownData.docs : [];
+        }
+      } catch {
+        /* optional */
+      }
+      if (cancelled) return;
+      setIndexedDocs(known);
 
       try {
         const res = await fetch("/api/scrape-project-files", {
@@ -99,9 +120,22 @@ export function ProjectScraper({
         });
         const data = await res.json();
         if (cancelled) return;
-        if (!res.ok) throw new Error(data.error || "Failed to fetch files");
 
-        const list = data.files as ProjectFile[];
+        let list = (res.ok ? data.files : []) as ProjectFile[];
+        if (!Array.isArray(list)) list = [];
+
+        // Merge previously indexed files that are no longer on the portal.
+        const byName = new Set(list.map((f) => f.name.trim().toLowerCase()));
+        for (const d of known) {
+          if (byName.has(d.fileName.trim().toLowerCase())) continue;
+          list.push({
+            id: `indexed-${d.fileKey}`,
+            name: d.fileName,
+            url: "",
+            type: "pdf",
+          });
+        }
+
         setProjectFiles(list);
 
         if (list.length === 0) {
@@ -155,6 +189,21 @@ export function ProjectScraper({
         }
       } catch (e) {
         if (cancelled) return;
+        if (known.length > 0) {
+          const list: ProjectFile[] = known.map((d) => ({
+            id: `indexed-${d.fileKey}`,
+            name: d.fileName,
+            url: "",
+            type: "pdf",
+          }));
+          setProjectFiles(list);
+          setChosenFileId(list[0]?.id ?? null);
+          setStep(lockProject ? "ready" : "select-file");
+          setError(
+            "Portal files unavailable — showing previously indexed documents."
+          );
+          return;
+        }
         setError(e instanceof Error ? e.message : "Network error");
         setStep("idle");
       }
@@ -185,69 +234,136 @@ export function ProjectScraper({
   const confirmFile = useCallback(
     async (file: ProjectFile) => {
       setError(null);
-
-      if (file.url.includes("procurement.opengov.com/portal/")) {
-        setProcessMsg("");
-        setError(
-          "This link opens the portal page, not a direct file. Pick another file in the list or upload a PDF below."
-        );
-        setStep(lockProject ? "ready" : "confirm-file");
+      const project = selectedProject;
+      if (!project) {
+        setError("No project selected.");
         return;
       }
 
-      if (portalPdfCache?.fileId === file.id && portalPdfCache.base64) {
-        onFileReady(
-          portalPdfCache.base64,
-          portalPdfCache.fileName,
-          file
-        );
-        setStep(lockProject ? "ready" : "idle");
-        return;
-      }
-
+      const fileKey = makeFileKey(project.id, file.name);
       setStep("processing");
-      setProcessMsg("Downloading file for analysis...");
+      setProcessMsg("Checking indexed document…");
+
       try {
-        const res = await fetch("/api/fetch-procurement-file", {
+        // Reuse Gemini File Search ID when we already indexed this file.
+        const ensureRes = await fetch("/api/file-search/ensure", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: file.url }),
+          body: JSON.stringify({
+            projectId: project.id,
+            projectTitle: project.title,
+            fileName: file.name,
+            fileKey,
+          }),
         });
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          base64?: string;
-          fileName?: string;
-          contentType?: string;
-        };
-        if (!res.ok) {
+        const ensureData = await ensureRes.json().catch(() => ({}));
+        if (ensureRes.ok && ensureData.reused && ensureData.storeName) {
+          onFileReady({
+            fileName: file.name,
+            sourceFile: file,
+            storeName: ensureData.storeName,
+            fileKey: ensureData.fileKey ?? fileKey,
+            reused: true,
+            pdfBase64: null,
+          });
+          setStep(lockProject ? "ready" : "idle");
+          setProcessMsg("");
+          return;
+        }
+
+        if (file.url.includes("procurement.opengov.com/portal/")) {
           setProcessMsg("");
           setError(
-            typeof data.error === "string"
-              ? data.error
-              : "Could not download file."
+            "This link opens the portal page, not a direct file. Pick another file in the list or upload a PDF below."
           );
           setStep(lockProject ? "ready" : "confirm-file");
           return;
         }
-        const base64 = data.base64;
-        if (!base64 || typeof base64 !== "string") {
+
+        if (!file.url) {
           setProcessMsg("");
-          setError("Could not download file.");
+          setError(
+            "This file is no longer on the portal and was not indexed yet. Upload the PDF manually."
+          );
           setStep(lockProject ? "ready" : "confirm-file");
           return;
         }
-        const name =
-          (typeof data.fileName === "string" && data.fileName) || file.name;
-        const contentType =
-          (typeof data.contentType === "string" && data.contentType) || "";
-        if (!looksLikePdf(name, contentType, base64)) {
+
+        let base64: string | null = null;
+        let name = file.name;
+
+        if (portalPdfCache?.fileId === file.id && portalPdfCache.base64) {
+          base64 = portalPdfCache.base64;
+          name = portalPdfCache.fileName;
+        } else {
+          setProcessMsg("Downloading file for analysis...");
+          const res = await fetch("/api/fetch-procurement-file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: file.url }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            base64?: string;
+            fileName?: string;
+            contentType?: string;
+          };
+          if (!res.ok || !data.base64) {
+            setProcessMsg("");
+            setError(
+              typeof data.error === "string"
+                ? data.error
+                : "Could not download file."
+            );
+            setStep(lockProject ? "ready" : "confirm-file");
+            return;
+          }
+          base64 = data.base64;
+          name =
+            (typeof data.fileName === "string" && data.fileName) || file.name;
+          const contentType =
+            (typeof data.contentType === "string" && data.contentType) || "";
+          if (!looksLikePdf(name, contentType, base64)) {
+            setProcessMsg("");
+            setError(MSG.pdfOnly);
+            setStep(lockProject ? "ready" : "select-file");
+            return;
+          }
+          setPortalPdfCache({ fileId: file.id, base64, fileName: name });
+        }
+
+        setProcessMsg("Indexing document for File Search…");
+        const indexRes = await fetch("/api/file-search/ensure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: project.id,
+            projectTitle: project.title,
+            fileName: name,
+            fileKey,
+            pdfBase64: base64,
+          }),
+        });
+        const indexData = await indexRes.json().catch(() => ({}));
+        if (!indexRes.ok || !indexData.storeName) {
           setProcessMsg("");
-          setError(MSG.pdfOnly);
-          setStep(lockProject ? "ready" : "select-file");
+          setError(
+            typeof indexData.error === "string"
+              ? indexData.error
+              : "Could not index document."
+          );
+          setStep(lockProject ? "ready" : "confirm-file");
           return;
         }
-        setPortalPdfCache({ fileId: file.id, base64, fileName: name });
-        onFileReady(base64, name, file);
+
+        onFileReady({
+          fileName: name,
+          sourceFile: file,
+          pdfBase64: base64,
+          storeName: indexData.storeName,
+          fileKey: indexData.fileKey ?? fileKey,
+          reused: Boolean(indexData.reused),
+        });
         setStep(lockProject ? "ready" : "idle");
         setProcessMsg("");
       } catch {
@@ -256,7 +372,13 @@ export function ProjectScraper({
         setStep(lockProject ? "ready" : "confirm-file");
       }
     },
-    [onFileReady, lockProject, portalPdfCache, setPortalPdfCache]
+    [
+      onFileReady,
+      lockProject,
+      portalPdfCache,
+      setPortalPdfCache,
+      selectedProject,
+    ]
   );
 
   const rejectFile = useCallback(() => {
@@ -292,7 +414,7 @@ export function ProjectScraper({
 
   if (lockProject && !selectedProject) {
     return (
-      <div className="rounded-lg border border-outline-variant bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
         <p className="text-sm text-on-surface-variant">
           Choose an open bid on Opportunities to load this project&apos;s files.
         </p>
@@ -307,7 +429,7 @@ export function ProjectScraper({
   }
 
   return (
-    <div className="rounded-lg border border-outline-variant bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon name="cloud_download" size="md" className="text-primary" />
@@ -382,7 +504,7 @@ export function ProjectScraper({
                       {p.financialId} · {p.department}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
                     {p.status}
                   </span>
                 </div>
@@ -446,11 +568,18 @@ export function ProjectScraper({
             <select
               value={chosenFileId}
               onChange={(e) => setChosenFileId(e.target.value)}
-              className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               {projectFiles.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name} ({f.type})
+                  {indexedDocs.some(
+                    (d) =>
+                      d.fileName.trim().toLowerCase() ===
+                      f.name.trim().toLowerCase()
+                  )
+                    ? " · indexed"
+                    : ""}
                 </option>
               ))}
             </select>

@@ -39,7 +39,7 @@ export function SideNav() {
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
                 active
                   ? "bg-secondary-container text-on-secondary-container shadow-sm"
-                  : "text-on-surface-variant hover:bg-white/70"
+                  : "text-on-surface-variant hover:bg-surface-container-lowest/70"
               }`}
             >
               <Icon

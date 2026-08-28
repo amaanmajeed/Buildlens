@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
@@ -29,24 +30,24 @@ function NavLink({
   );
 }
 
-export function TopNav({
-  insightsActive,
-}: {
-  /** Force Insights tab styling (e.g. spec/plan workspace) */
-  insightsActive?: boolean;
-}) {
+export function TopNav() {
   const pathname = usePathname() ?? "";
   const { geminiModel, setGeminiModel } = useAppState();
+  const [dark, setDark] = useState(() => {
+    if (typeof document === "undefined") return false;
+    return document.documentElement.classList.contains("dark");
+  });
   const opportunitiesActive =
     pathname === "/" ||
     pathname === "/opportunities" ||
     pathname.startsWith("/opportunities/");
-  const insights =
-    insightsActive ??
-    (!opportunitiesActive &&
-      (pathname.startsWith("/spec-analysis") ||
-        pathname.startsWith("/plan-takeoff") ||
-        pathname.startsWith("/estimate-draft")));
+
+  function toggleTheme() {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    setDark(next);
+  }
 
   return (
     <header className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-background px-margin-mobile md:px-margin-desktop">
@@ -60,9 +61,6 @@ export function TopNav({
         <nav className="ml-stack-lg hidden gap-stack-md md:flex md:gap-stack-lg">
           <NavLink href="/" active={opportunitiesActive}>
             Opportunities
-          </NavLink>
-          <NavLink href="/spec-analysis" active={insights ?? false}>
-            Insights
           </NavLink>
         </nav>
       </div>
@@ -87,24 +85,12 @@ export function TopNav({
         </select>
         <button
           type="button"
-          aria-label="Notifications"
-          className="inline-flex size-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-variant"
+          aria-label="Toggle theme"
+          onClick={toggleTheme}
+          className="inline-flex size-10 items-center justify-center rounded-lg bg-surface-container-high text-on-surface transition-colors hover:bg-surface-variant"
         >
-          <Icon name="notifications" size="lg" className="text-on-surface-variant" />
+          <Icon name={dark ? "sun" : "moon"} size="lg" className="text-on-surface" />
         </button>
-        <button
-          type="button"
-          aria-label="Settings"
-          className="inline-flex size-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-variant"
-        >
-          <Icon name="settings" size="lg" className="text-on-surface-variant" />
-        </button>
-        <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-primary-container text-xs font-semibold text-on-primary-container"
-          title="Profile"
-        >
-          JD
-        </div>
       </div>
     </header>
   );

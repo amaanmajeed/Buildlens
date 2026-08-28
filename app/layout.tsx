@@ -16,10 +16,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BuildLens AI — MVP",
+  title: "BuildLens AI",
   description:
     "Construction specification reader, plan takeoff, and estimate draft demo.",
 };
+
+const themeInitScript = `
+try {
+  const theme = localStorage.getItem('theme') ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  if (theme === 'dark') document.documentElement.classList.add('dark');
+} catch (e) {}
+`;
 
 export default function RootLayout({
   children,
@@ -29,9 +37,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F4F7FA] text-on-surface">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-on-surface">
         <Providers>{children}</Providers>
       </body>
     </html>

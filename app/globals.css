@@ -1,44 +1,126 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
   --background: #f4f7fa;
   --foreground: #1a1c1e;
+
+  --bl-background: #faf9fc;
+  --bl-foreground: #1a1c1e;
+  --bl-on-background: #1a1c1e;
+  --bl-primary: #022448;
+  --bl-on-primary: #ffffff;
+  --bl-primary-container: #1e3a5f;
+  --bl-on-primary-container: #8aa4cf;
+  --bl-secondary: #505f76;
+  --bl-on-secondary: #ffffff;
+  --bl-secondary-container: #d0e1fb;
+  --bl-on-secondary-container: #54647a;
+  --bl-surface: #faf9fc;
+  --bl-surface-bright: #faf9fc;
+  --bl-surface-container-low: #f4f3f7;
+  --bl-surface-container-lowest: #ffffff;
+  --bl-surface-container: #eeedf1;
+  --bl-surface-container-high: #e9e7eb;
+  --bl-surface-container-highest: #e3e2e6;
+  --bl-surface-variant: #e3e2e6;
+  --bl-on-surface: #1a1c1e;
+  --bl-on-surface-variant: #43474e;
+  --bl-outline: #74777f;
+  --bl-outline-variant: #c4c6cf;
+  --bl-error: #ba1a1a;
+  --bl-on-error: #ffffff;
+  --bl-error-container: #ffdad6;
+  --bl-on-error-container: #93000a;
+  --bl-primary-fixed: #d5e3ff;
+  --bl-primary-fixed-dim: #adc8f5;
+  --bl-secondary-fixed: #d3e4fe;
+  --bl-tertiary-fixed: #ffddb2;
+  --bl-on-tertiary-fixed: #291800;
+  --focus-ring-bg: #faf9fc;
+  --shadow-buildlens: 0px 4px 20px rgba(30, 58, 95, 0.08);
+  --ai-gradient: linear-gradient(180deg, #ffffff 0%, rgba(2, 36, 72, 0.05) 100%);
+  --blueprint-line: #e3e2e6;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0e1218;
+  --foreground: #e8eaed;
+
+  --bl-background: #0e1218;
+  --bl-foreground: #e8eaed;
+  --bl-on-background: #e8eaed;
+  --bl-primary: #8aa4cf;
+  --bl-on-primary: #022448;
+  --bl-primary-container: #1e3a5f;
+  --bl-on-primary-container: #d5e3ff;
+  --bl-secondary: #b0c0d8;
+  --bl-on-secondary: #1a2433;
+  --bl-secondary-container: #2a3548;
+  --bl-on-secondary-container: #d0e1fb;
+  --bl-surface: #0e1218;
+  --bl-surface-bright: #161b22;
+  --bl-surface-container-low: #141920;
+  --bl-surface-container-lowest: #1a2030;
+  --bl-surface-container: #1e2533;
+  --bl-surface-container-high: #262e3d;
+  --bl-surface-container-highest: #2e3748;
+  --bl-surface-variant: #2e3748;
+  --bl-on-surface: #e8eaed;
+  --bl-on-surface-variant: #a8adb6;
+  --bl-outline: #8a9099;
+  --bl-outline-variant: #3a414c;
+  --bl-error: #ffb4ab;
+  --bl-on-error: #690005;
+  --bl-error-container: #93000a;
+  --bl-on-error-container: #ffdad6;
+  --bl-primary-fixed: #1e3a5f;
+  --bl-primary-fixed-dim: #3a5478;
+  --bl-secondary-fixed: #2a3548;
+  --bl-tertiary-fixed: #4a3420;
+  --bl-on-tertiary-fixed: #ffddb2;
+  --focus-ring-bg: #0e1218;
+  --shadow-buildlens: 0px 4px 20px rgba(0, 0, 0, 0.35);
+  --ai-gradient: linear-gradient(180deg, #1a2030 0%, rgba(138, 164, 207, 0.08) 100%);
+  --blueprint-line: #2e3748;
 }
 
 @theme inline {
-  --color-background: #faf9fc;
-  --color-foreground: #1a1c1e;
-  --color-on-background: #1a1c1e;
-  --color-primary: #022448;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #1e3a5f;
-  --color-on-primary-container: #8aa4cf;
-  --color-secondary: #505f76;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #d0e1fb;
-  --color-on-secondary-container: #54647a;
-  --color-surface: #faf9fc;
-  --color-surface-bright: #faf9fc;
-  --color-surface-container-low: #f4f3f7;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container: #eeedf1;
-  --color-surface-container-high: #e9e7eb;
-  --color-surface-container-highest: #e3e2e6;
-  --color-surface-variant: #e3e2e6;
-  --color-on-surface: #1a1c1e;
-  --color-on-surface-variant: #43474e;
-  --color-outline: #74777f;
-  --color-outline-variant: #c4c6cf;
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-  --color-primary-fixed: #d5e3ff;
-  --color-primary-fixed-dim: #adc8f5;
-  --color-secondary-fixed: #d3e4fe;
-  --color-tertiary-fixed: #ffddb2;
-  --color-on-tertiary-fixed: #291800;
+  --color-background: var(--bl-background);
+  --color-foreground: var(--bl-foreground);
+  --color-on-background: var(--bl-on-background);
+  --color-primary: var(--bl-primary);
+  --color-on-primary: var(--bl-on-primary);
+  --color-primary-container: var(--bl-primary-container);
+  --color-on-primary-container: var(--bl-on-primary-container);
+  --color-secondary: var(--bl-secondary);
+  --color-on-secondary: var(--bl-on-secondary);
+  --color-secondary-container: var(--bl-secondary-container);
+  --color-on-secondary-container: var(--bl-on-secondary-container);
+  --color-surface: var(--bl-surface);
+  --color-surface-bright: var(--bl-surface-bright);
+  --color-surface-container-low: var(--bl-surface-container-low);
+  --color-surface-container-lowest: var(--bl-surface-container-lowest);
+  --color-surface-container: var(--bl-surface-container);
+  --color-surface-container-high: var(--bl-surface-container-high);
+  --color-surface-container-highest: var(--bl-surface-container-highest);
+  --color-surface-variant: var(--bl-surface-variant);
+  --color-on-surface: var(--bl-on-surface);
+  --color-on-surface-variant: var(--bl-on-surface-variant);
+  --color-outline: var(--bl-outline);
+  --color-outline-variant: var(--bl-outline-variant);
+  --color-error: var(--bl-error);
+  --color-on-error: var(--bl-on-error);
+  --color-error-container: var(--bl-error-container);
+  --color-on-error-container: var(--bl-on-error-container);
+  --color-primary-fixed: var(--bl-primary-fixed);
+  --color-primary-fixed-dim: var(--bl-primary-fixed-dim);
+  --color-secondary-fixed: var(--bl-secondary-fixed);
+  --color-tertiary-fixed: var(--bl-tertiary-fixed);
+  --color-on-tertiary-fixed: var(--bl-on-tertiary-fixed);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -54,7 +136,7 @@
 
   --max-width-container-max: 1440px;
 
-  --shadow-buildlens: 0px 4px 20px rgba(30, 58, 95, 0.08);
+  --shadow-buildlens: var(--shadow-buildlens);
 }
 
 body {
@@ -108,7 +190,7 @@ body {
   :where(button, a[href], summary, select):focus-visible {
     outline: none;
     box-shadow:
-      0 0 0 2px #faf9fc,
+      0 0 0 2px var(--focus-ring-bg),
       0 0 0 4px rgb(30 58 95 / 0.78);
   }
 
@@ -118,8 +200,18 @@ body {
   [role="tab"]:focus-visible {
     outline: none;
     box-shadow:
-      0 0 0 2px #faf9fc,
+      0 0 0 2px var(--focus-ring-bg),
       0 0 0 4px rgb(30 58 95 / 0.78);
+  }
+
+  .dark :where(button, a[href], summary, select):focus-visible,
+  .dark input:not(:disabled)[type]:not([type="hidden"]):focus-visible:not([readonly]),
+  .dark textarea:not(:disabled):focus-visible:not([readonly]),
+  .dark [role="button"]:focus-visible,
+  .dark [role="tab"]:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--focus-ring-bg),
+      0 0 0 4px rgb(138 164 207 / 0.7);
   }
 
   :where(button, a[href], input[type="checkbox"], summary) {
@@ -129,24 +221,24 @@ body {
 }
 
 .shadow-buildlens {
-  box-shadow: 0px 4px 20px rgba(30, 58, 95, 0.08);
+  box-shadow: var(--shadow-buildlens);
 }
 
 .ai-gradient-surface {
-  background: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    rgba(2, 36, 72, 0.05) 100%
-  );
+  background: var(--ai-gradient);
 }
 
 .blueprint-canvas {
   background-image:
-    linear-gradient(#e3e2e6 1px, transparent 1px),
-    linear-gradient(90deg, #e3e2e6 1px, transparent 1px);
+    linear-gradient(var(--blueprint-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--blueprint-line) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .zebra-table tbody tr:nth-child(even) {
   background-color: rgba(2, 36, 72, 0.02);
+}
+
+.dark .zebra-table tbody tr:nth-child(even) {
+  background-color: rgba(138, 164, 207, 0.06);
 }

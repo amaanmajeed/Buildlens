@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
+import {
+  makeFileKey,
+  makeManualFileKey,
+  shortContentHash,
+} from "@/lib/fileKey";
 import { MSG } from "@/lib/messages";
-import type { ProjectFile } from "@/lib/scraper";
 import type { ChatTurn, SovRow } from "@/lib/types";
+import type { ChatTab, FileReadyPayload } from "@/lib/workspaceTypes";
 import { Icon } from "@/components/ui/Icon";
 import { useAppState } from "@/components/workspace/AppStateProvider";
 import { Spinner } from "./Spinner";
@@ -20,52 +25,210 @@ const SUGGESTIONS = [
 ];
 
 export function SpecReader() {
-  const { setSovSchedule, setSpecSourceFileId, setPortalPdfCache, geminiModel } =
-    useAppState();
+  const {
+    selectedProject,
+    setSovSchedule,
+    setSpecSourceFileId,
+    setPortalPdfCache,
+    geminiModel,
+  } = useAppState();
   const inputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const saveChatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSovTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [fileKey, setFileKey] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string>("");
   const [sovLoading, setSovLoading] = useState(false);
   const [sovReady, setSovReady] = useState(false);
   const [schedule, setSchedule] = useState<SovRow[]>([]);
+  const [chats, setChats] = useState<ChatTab[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [question, setQuestion] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
+  const docReady = Boolean(storeName && fileKey);
+
   const pickFile = () => inputRef.current?.click();
 
+  const persistSov = useCallback(
+    (key: string, rows: SovRow[], projectId: number) => {
+      if (saveSovTimer.current) clearTimeout(saveSovTimer.current);
+      saveSovTimer.current = setTimeout(() => {
+        void fetch("/api/workspace/file", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileKey: key,
+            projectId,
+            sovSchedule: rows,
+          }),
+        });
+      }, 500);
+    },
+    []
+  );
+
+  const persistActiveChat = useCallback(
+    (key: string, chatId: string | null, projectId: number) => {
+      void fetch("/api/workspace/file", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileKey: key,
+          projectId,
+          activeChatId: chatId,
+        }),
+      });
+    },
+    []
+  );
+
+  const persistMessages = useCallback(
+    (chatId: string, next: ChatTurn[]) => {
+      if (saveChatTimer.current) clearTimeout(saveChatTimer.current);
+      saveChatTimer.current = setTimeout(() => {
+        void fetch(`/api/workspace/chats/${chatId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: next }),
+        });
+      }, 500);
+    },
+    []
+  );
+
+  const loadChats = useCallback(
+    async (key: string, preferredChatId: string | null) => {
+      const res = await fetch(
+        `/api/workspace/chats?fileKey=${encodeURIComponent(key)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      let list: ChatTab[] = Array.isArray(data.chats) ? data.chats : [];
+
+      if (list.length === 0) {
+        const created = await fetch("/api/workspace/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileKey: key, title: "Chat 1" }),
+        });
+        const createdData = await created.json().catch(() => ({}));
+        if (created.ok && createdData.chat) {
+          list = [createdData.chat as ChatTab];
+        }
+      }
+
+      setChats(list);
+      const active =
+        (preferredChatId && list.find((c) => c.id === preferredChatId)) ||
+        list[0] ||
+        null;
+      setActiveChatId(active?.id ?? null);
+      setMessages(active?.messages ?? []);
+      return active?.id ?? null;
+    },
+    []
+  );
+
+  const runExtract = useCallback(
+    async (opts: {
+      storeName?: string | null;
+      fileKey?: string | null;
+      pdfBase64?: string | null;
+    }) => {
+      const body: Record<string, unknown> = { model: geminiModel };
+      if (opts.storeName && opts.fileKey) {
+        body.storeName = opts.storeName;
+        body.fileKey = opts.fileKey;
+      } else if (opts.pdfBase64) {
+        body.pdfBase64 = opts.pdfBase64;
+      } else {
+        return false;
+      }
+
+      const res = await fetch("/api/spec-extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (process.env.NODE_ENV === "development" && data.debug) {
+          console.error("[spec-extract]", data.code, data.debug);
+        }
+        const msg =
+          typeof data.error === "string" ? data.error : MSG.aiUnavailable;
+        const code =
+          typeof data.code === "string" ? ` (${data.code})` : "";
+        setBanner(msg + (process.env.NODE_ENV === "development" ? code : ""));
+        setSovSchedule([]);
+        return false;
+      }
+      const rows = Array.isArray(data.schedule) ? data.schedule : [];
+      setSchedule(rows);
+      setSovSchedule(rows);
+      setSovReady(true);
+      return true;
+    },
+    [setSovSchedule, geminiModel]
+  );
+
   const onScrapedFileReady = useCallback(
-    async (b64: string, fileName: string, sourceFile?: ProjectFile | null) => {
+    async (payload: FileReadyPayload) => {
       setBanner(null);
-      setSpecSourceFileId(sourceFile?.id ?? null);
+      setSpecSourceFileId(payload.sourceFile?.id ?? null);
       setSovLoading(true);
       setSovReady(false);
       setSchedule([]);
       setSovSchedule([]);
       setMessages([]);
-      setPdfBase64(null);
-      setFileLabel(fileName);
-      setPdfBase64(b64);
+      setChats([]);
+      setActiveChatId(null);
+      setPdfBase64(payload.pdfBase64 ?? null);
+      setFileLabel(payload.fileName);
+      setStoreName(payload.storeName ?? null);
+      setFileKey(payload.fileKey ?? null);
+
+      const key =
+        payload.fileKey ??
+        (selectedProject
+          ? makeFileKey(selectedProject.id, payload.fileName)
+          : null);
+
       try {
-        const res = await fetch("/api/spec-extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pdfBase64: b64, model: geminiModel }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const msg =
-            typeof data.error === "string" ? data.error : MSG.aiUnavailable;
-          setBanner(msg);
-          setSpecSourceFileId(null);
-          return;
+        if (key) {
+          setFileKey(key);
+          const wsRes = await fetch(
+            `/api/workspace/file?fileKey=${encodeURIComponent(key)}`
+          );
+          const ws = await wsRes.json().catch(() => ({}));
+          const savedSov = Array.isArray(ws.sovSchedule) ? ws.sovSchedule : [];
+          const activeId = await loadChats(key, ws.activeChatId ?? null);
+          if (selectedProject && activeId) {
+            persistActiveChat(key, activeId, selectedProject.id);
+          }
+
+          if (savedSov.length > 0 && payload.reused) {
+            setSchedule(savedSov);
+            setSovSchedule(savedSov);
+            setSovReady(true);
+            if (payload.storeName) setStoreName(payload.storeName);
+            return;
+          }
         }
-        const rows = Array.isArray(data.schedule) ? data.schedule : [];
-        setSchedule(rows);
-        setSovSchedule(rows);
-        setSovReady(true);
+
+        const ok = await runExtract({
+          storeName: payload.storeName,
+          fileKey: key,
+          pdfBase64: payload.pdfBase64,
+        });
+        if (!ok) {
+          setSpecSourceFileId(null);
+        }
       } catch {
         setBanner(MSG.aiUnavailable);
         setSpecSourceFileId(null);
@@ -74,34 +237,21 @@ export function SpecReader() {
         setSovLoading(false);
       }
     },
-    [setSovSchedule, setSpecSourceFileId, geminiModel]
+    [
+      selectedProject,
+      setSovSchedule,
+      setSpecSourceFileId,
+      runExtract,
+      loadChats,
+      persistActiveChat,
+    ]
   );
 
-  const runExtract = useCallback(async (b64: string) => {
-    const res = await fetch("/api/spec-extract", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pdfBase64: b64, model: geminiModel }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      if (process.env.NODE_ENV === "development" && data.debug) {
-        console.error("[spec-extract]", data.code, data.debug);
-      }
-      const msg =
-        typeof data.error === "string" ? data.error : MSG.aiUnavailable;
-      const code =
-        typeof data.code === "string" ? ` (${data.code})` : "";
-      setBanner(msg + (process.env.NODE_ENV === "development" ? code : ""));
-      setSovSchedule([]);
-      return false;
-    }
-    const rows = Array.isArray(data.schedule) ? data.schedule : [];
-    setSchedule(rows);
-    setSovSchedule(rows);
-    setSovReady(true);
-    return true;
-  }, [setSovSchedule, geminiModel]);
+  // Persist SOV whenever schedule changes for an open file.
+  useEffect(() => {
+    if (!fileKey || !selectedProject || !sovReady) return;
+    persistSov(fileKey, schedule, selectedProject.id);
+  }, [schedule, fileKey, selectedProject, sovReady, persistSov]);
 
   const onFile = useCallback(
     async (f: File | null) => {
@@ -125,27 +275,66 @@ export function SpecReader() {
       setSchedule([]);
       setSovSchedule([]);
       setMessages([]);
+      setChats([]);
+      setActiveChatId(null);
       setPdfBase64(null);
+      setStoreName(null);
+      setFileKey(null);
       setFileLabel(f.name);
       try {
         const b64 = await fileToBase64(f);
         setPdfBase64(b64);
-        await runExtract(b64);
+        const projectId = selectedProject?.id;
+        const key = projectId
+          ? makeFileKey(projectId, f.name)
+          : makeManualFileKey(f.name, shortContentHash(b64));
+
+        const ensureRes = await fetch("/api/file-search/ensure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: projectId ?? 0,
+            projectTitle: selectedProject?.title ?? "Manual upload",
+            fileName: f.name,
+            fileKey: key,
+            pdfBase64: b64,
+          }),
+        });
+        const ensureData = await ensureRes.json().catch(() => ({}));
+        if (ensureRes.ok && ensureData.storeName) {
+          setStoreName(ensureData.storeName);
+          setFileKey(ensureData.fileKey ?? key);
+          await loadChats(ensureData.fileKey ?? key, null);
+          const ok = await runExtract({
+            storeName: ensureData.storeName,
+            fileKey: ensureData.fileKey ?? key,
+          });
+          if (!ok) return;
+        } else {
+          await runExtract({ pdfBase64: b64 });
+        }
       } catch {
         setBanner(MSG.aiUnavailable);
       } finally {
         setSovLoading(false);
       }
     },
-    [runExtract, setSpecSourceFileId, setSovSchedule, setPortalPdfCache]
+    [
+      runExtract,
+      setSpecSourceFileId,
+      setSovSchedule,
+      setPortalPdfCache,
+      selectedProject,
+      loadChats,
+    ]
   );
 
   const recalculate = async () => {
-    if (!pdfBase64) return;
+    if (!storeName && !pdfBase64) return;
     setSovLoading(true);
     setBanner(null);
     try {
-      await runExtract(pdfBase64);
+      await runExtract({ storeName, fileKey, pdfBase64 });
     } finally {
       setSovLoading(false);
     }
@@ -183,22 +372,78 @@ export function SpecReader() {
     el.scrollTop = el.scrollHeight;
   }, [messages, chatLoading]);
 
+  const switchChat = (chatId: string) => {
+    const tab = chats.find((c) => c.id === chatId);
+    if (!tab) return;
+    setActiveChatId(chatId);
+    setMessages(tab.messages);
+    if (fileKey && selectedProject) {
+      persistActiveChat(fileKey, chatId, selectedProject.id);
+    }
+  };
+
+  const newChat = async () => {
+    if (!fileKey) return;
+    const res = await fetch("/api/workspace/chats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileKey,
+        title: `Chat ${chats.length + 1}`,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.chat) {
+      setBanner(
+        typeof data.error === "string" ? data.error : "Could not create chat."
+      );
+      return;
+    }
+    const chat = data.chat as ChatTab;
+    setChats((prev) => [...prev, chat]);
+    setActiveChatId(chat.id);
+    setMessages([]);
+    if (selectedProject) {
+      persistActiveChat(fileKey, chat.id, selectedProject.id);
+    }
+  };
+
+  const deleteChat = async (chatId: string) => {
+    if (chats.length <= 1) return;
+    await fetch(`/api/workspace/chats/${chatId}`, { method: "DELETE" });
+    const next = chats.filter((c) => c.id !== chatId);
+    setChats(next);
+    const fallback = next[0];
+    setActiveChatId(fallback?.id ?? null);
+    setMessages(fallback?.messages ?? []);
+    if (fileKey && selectedProject) {
+      persistActiveChat(fileKey, fallback?.id ?? null, selectedProject.id);
+    }
+  };
+
   const sendQuestion = async (e?: React.FormEvent, qOverride?: string) => {
     e?.preventDefault();
     const q = (qOverride ?? question).trim();
-    if (!pdfBase64 || chatLoading || !q) return;
+    if ((!docReady && !pdfBase64) || chatLoading || !q) return;
     setChatLoading(true);
     setBanner(null);
     try {
+      const body: Record<string, unknown> = {
+        question: q,
+        history: messages,
+        model: geminiModel,
+      };
+      if (storeName && fileKey) {
+        body.storeName = storeName;
+        body.fileKey = fileKey;
+      } else if (pdfBase64) {
+        body.pdfBase64 = pdfBase64;
+      }
+
       const res = await fetch("/api/spec-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pdfBase64,
-          question: q,
-          history: messages,
-          model: geminiModel,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -214,11 +459,18 @@ export function SpecReader() {
       }
       const answer =
         typeof data.answer === "string" ? data.answer : MSG.aiUnavailable;
-      setMessages((m) => [
-        ...m,
+      const next: ChatTurn[] = [
+        ...messages,
         { role: "user", content: q },
         { role: "assistant", content: answer },
-      ]);
+      ];
+      setMessages(next);
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === activeChatId ? { ...c, messages: next } : c
+        )
+      );
+      if (activeChatId) persistMessages(activeChatId, next);
       setQuestion("");
     } catch {
       setBanner(MSG.aiUnavailable);
@@ -226,6 +478,9 @@ export function SpecReader() {
       setChatLoading(false);
     }
   };
+
+  const canChat = docReady || Boolean(pdfBase64);
+  const canRecalc = docReady || Boolean(pdfBase64);
 
   return (
     <div
@@ -254,7 +509,7 @@ export function SpecReader() {
         </div>
 
         <div className="grid grid-cols-1 gap-gutter">
-          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-white p-6">
+          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-surface-container-lowest p-6">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <input
                 ref={inputRef}
@@ -277,8 +532,9 @@ export function SpecReader() {
                 <Spinner label="Extracting Schedule of Values…" />
               ) : null}
               {sovReady && !sovLoading ? (
-                <span className="text-sm font-medium text-green-700">
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">
                   Document ready
+                  {storeName ? " · File Search indexed" : ""}
                 </span>
               ) : null}
             </div>
@@ -336,7 +592,7 @@ export function SpecReader() {
             </div>
           </div>
 
-          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-white p-6">
+          <div className="shadow-buildlens w-full rounded-lg border border-outline-variant bg-surface-container-lowest p-6">
             <div className="mb-4 flex items-center gap-2.5">
               <Icon name="info" size="md" className="text-primary" />
               <h3 className="text-lg font-semibold tracking-tight text-primary">
@@ -345,8 +601,9 @@ export function SpecReader() {
             </div>
             <p className="text-sm text-on-surface-variant">
               AI reads your PDF and surfaces the Schedule of Values for review.
-              Use Project Intelligence to ask questions about risk, materials,
-              and contract terms.
+              Indexed documents are reused without re-uploading. Use Project
+              Intelligence to ask questions about risk, materials, and contract
+              terms.
             </p>
           </div>
         </div>
@@ -356,7 +613,7 @@ export function SpecReader() {
             type="button"
             onClick={exportReport}
             disabled={schedule.length === 0}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface shadow-sm transition-colors hover:bg-surface-variant disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface shadow-sm transition-colors hover:bg-surface-variant disabled:opacity-50"
           >
             <Icon name="download" size="md" className="text-on-surface-variant" />
             Export CSV
@@ -364,7 +621,7 @@ export function SpecReader() {
           <button
             type="button"
             onClick={() => void recalculate()}
-            disabled={!pdfBase64 || sovLoading}
+            disabled={!canRecalc || sovLoading}
             className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary shadow-sm ring-1 ring-primary/15 transition-opacity hover:opacity-[0.92] disabled:opacity-50"
           >
             <Icon name="refresh" size="md" className="text-on-primary" />
@@ -386,19 +643,57 @@ export function SpecReader() {
       </section>
 
       <aside className="ai-gradient-surface flex min-h-[50vh] flex-col border-t border-outline-variant md:h-full md:min-h-0 md:max-w-[44%] md:flex-[0.4] md:border-l md:border-t-0">
-        <div className="shrink-0 border-b border-outline-variant bg-white/50 p-stack-lg backdrop-blur-sm">
+        <div className="shrink-0 border-b border-outline-variant bg-surface-container-lowest/50 p-stack-lg backdrop-blur-sm">
           <div className="mb-stack-md flex items-center gap-2.5">
             <Icon name="auto_awesome" size="md" className="text-primary" />
             <h2 className="text-lg font-semibold tracking-tight text-primary">
               Project Intelligence
             </h2>
           </div>
+
+          {fileKey ? (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              {chats.map((c) => (
+                <div key={c.id} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => switchChat(c.id)}
+                    className={`rounded-l-md border px-2.5 py-1 text-xs font-medium ${
+                      c.id === activeChatId
+                        ? "border-primary bg-primary text-on-primary"
+                        : "border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-variant"
+                    } ${chats.length > 1 ? "" : "rounded-r-md"}`}
+                  >
+                    {c.title}
+                  </button>
+                  {chats.length > 1 ? (
+                    <button
+                      type="button"
+                      aria-label={`Delete ${c.title}`}
+                      onClick={() => void deleteChat(c.id)}
+                      className="rounded-r-md border border-l-0 border-outline-variant bg-surface-container-lowest px-1.5 py-1 text-xs text-on-surface-variant hover:bg-error-container/40 hover:text-error"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => void newChat()}
+                className="rounded-md border border-dashed border-outline-variant px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/5"
+              >
+                + New chat
+              </button>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
                 type="button"
-                disabled={!pdfBase64 || chatLoading}
+                disabled={!canChat || chatLoading}
                 onClick={() => void sendQuestion(undefined, s)}
                 className="rounded-full border border-outline-variant/30 bg-surface-container-high px-3.5 py-2 text-left text-xs font-medium leading-snug text-on-surface transition-colors hover:bg-surface-variant disabled:opacity-50"
               >
@@ -422,8 +717,8 @@ export function SpecReader() {
                 key={i}
                 className={
                   m.role === "user"
-                    ? "ml-4 rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm shadow-sm"
-                    : "mr-4 rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm shadow-sm"
+                    ? "ml-4 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm shadow-sm"
+                    : "mr-4 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm shadow-sm"
                 }
               >
                 <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
@@ -442,7 +737,7 @@ export function SpecReader() {
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-20 shrink-0 border-t border-outline-variant bg-white p-stack-lg shadow-[0_-6px_20px_rgba(30,58,95,0.08)] md:static md:z-auto md:shadow-none">
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-outline-variant bg-surface-container-lowest p-stack-lg shadow-buildlens md:static md:z-auto md:shadow-none">
           <form
             onSubmit={(e) => void sendQuestion(e)}
             className="relative flex items-center"
@@ -451,12 +746,12 @@ export function SpecReader() {
               className="w-full rounded-xl border border-outline-variant bg-surface-container-low py-3 pl-4 pr-12 text-sm text-on-surface transition-all placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Ask about technical specs, risk, or dates…"
               value={question}
-              disabled={!pdfBase64 || chatLoading}
+              disabled={!canChat || chatLoading}
               onChange={(e) => setQuestion(e.target.value)}
             />
             <button
               type="submit"
-              disabled={!pdfBase64 || chatLoading || !question.trim()}
+              disabled={!canChat || chatLoading || !question.trim()}
               className="absolute right-2 inline-flex size-9 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
               aria-label="Send"
             >

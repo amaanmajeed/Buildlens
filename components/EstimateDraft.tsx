@@ -98,7 +98,7 @@ export function EstimateDraft() {
         </div>
       </header>
 
-      <div className="shadow-buildlens overflow-hidden rounded-xl border border-outline-variant bg-white">
+      <div className="shadow-buildlens overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
         <div className="overflow-x-auto">
           <table className="zebra-table min-w-full text-left">
             <thead className="border-b border-outline-variant bg-surface-container-low">
@@ -138,7 +138,7 @@ export function EstimateDraft() {
                   <tr key={r.id}>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full min-w-[10rem] rounded border border-outline-variant bg-white px-2 py-1.5 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full min-w-[10rem] rounded border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                         value={r.item}
                         onChange={(e) =>
                           setRow(r.id, { item: e.target.value })
@@ -209,7 +209,7 @@ export function EstimateDraft() {
         <button
           type="button"
           onClick={addRow}
-          className="inline-flex h-10 items-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-container"
+          className="inline-flex h-10 items-center rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-container"
         >
           Add row
         </button>

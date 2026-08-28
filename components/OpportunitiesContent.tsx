@@ -86,7 +86,7 @@ export function OpportunitiesContent() {
           </Link>
         </p>
       ) : (
-        <ul className="shadow-buildlens divide-y divide-outline-variant overflow-hidden rounded-xl border border-outline-variant bg-white">
+        <ul className="shadow-buildlens divide-y divide-outline-variant overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
           {projects.map((p) => (
             <li key={p.id}>
               <button
@@ -98,7 +98,7 @@ export function OpportunitiesContent() {
                   <span className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
                     {p.department}
                   </span>
-                  <h2 className="mt-0.5 text-base font-semibold leading-snug text-primary group-hover:text-primary-container md:text-lg">
+                  <h2 className="mt-0.5 text-base font-semibold leading-snug text-primary group-hover:text-on-primary-container md:text-lg">
                     {p.title}
                   </h2>
                   <p className="mt-1 text-xs text-on-surface-variant">
@@ -111,7 +111,7 @@ export function OpportunitiesContent() {
                       Due {new Date(p.proposalDeadline).toLocaleDateString()}
                     </span>
                   ) : null}
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">
                     {p.status}
                   </span>
                   <Icon

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { fileToBase64 } from "@/lib/fileBase64";
+import { makeFileKey, makeManualFileKey, shortContentHash } from "@/lib/fileKey";
 import { MSG } from "@/lib/messages";
 import type { ProjectFile } from "@/lib/scraper";
 import type { PlanQuantityRow } from "@/lib/types";
@@ -41,6 +42,16 @@ function looksLikePdf(fileName: string, contentType: string, base64: string) {
   }
 }
 
+function withIds(list: PlanQuantityRow[]): LocalRow[] {
+  return list.map((r) => ({
+    ...r,
+    id:
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${r.item}-${r.quantity}-${Math.random()}`,
+  }));
+}
+
 export function PlanReader() {
   const {
     sendToEstimateDraft,
@@ -52,8 +63,10 @@ export function PlanReader() {
   } = useAppState();
   const fileInput = useRef<HTMLInputElement>(null);
   const manualPdfRef = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState("");
+  const [fileKey, setFileKey] = useState<string | null>(null);
   const [selectedPortalFileId, setSelectedPortalFileId] = useState<
     string | null
   >(null);
@@ -64,8 +77,32 @@ export function PlanReader() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const pickFile = () => fileInput.current?.click();
+
+  const persistPlan = useCallback(
+    (key: string, projectId: number, takeoff: LocalRow[], type: string) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        void fetch("/api/workspace/file", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileKey: key,
+            projectId,
+            planTakeoff: takeoff.map((row) => {
+              const { id: _omit, ...rest } = row;
+              void _omit;
+              return rest;
+            }),
+            planType: type,
+          }),
+        });
+      }, 500);
+    },
+    []
+  );
 
   useEffect(() => {
     manualPdfRef.current = false;
@@ -90,21 +127,49 @@ export function PlanReader() {
     });
   }, [projectFiles, specSourceFileId]);
 
+  const hydrateWorkspace = useCallback(async (key: string) => {
+    setHydrated(false);
+    try {
+      const res = await fetch(
+        `/api/workspace/file?fileKey=${encodeURIComponent(key)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      const takeoff = Array.isArray(data.planTakeoff) ? data.planTakeoff : [];
+      if (
+        typeof data.planType === "string" &&
+        (PLAN_TYPES as readonly string[]).includes(data.planType)
+      ) {
+        setPlanType(data.planType as (typeof PLAN_TYPES)[number]);
+      }
+      setRows(takeoff.length > 0 ? withIds(takeoff as PlanQuantityRow[]) : []);
+    } catch {
+      setRows([]);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
   const loadPortalPdf = useCallback(
     async (file: ProjectFile) => {
       setBanner(null);
+      const key = selectedProject
+        ? makeFileKey(selectedProject.id, file.name)
+        : null;
+      setFileKey(key);
+      if (key) void hydrateWorkspace(key);
 
-      if (
-        portalPdfCache?.fileId === file.id &&
-        portalPdfCache.base64
-      ) {
+      if (portalPdfCache?.fileId === file.id && portalPdfCache.base64) {
         setFileLabel(portalPdfCache.fileName);
         setPdfBase64(portalPdfCache.base64);
-        setRows([]);
         return;
       }
 
-      if (file.url.includes("procurement.opengov.com/portal/")) {
+      if (!file.url || file.url.includes("procurement.opengov.com/portal/")) {
+        if (!file.url) {
+          setFileLabel(file.name);
+          setPdfBase64(null);
+          return;
+        }
         setBanner(
           "This link opens the portal page, not a direct file. Pick another file or upload a PDF."
         );
@@ -115,7 +180,6 @@ export function PlanReader() {
       setPortalLoading(true);
       setPdfBase64(null);
       setFileLabel(file.name);
-      setRows([]);
       try {
         const res = await fetch("/api/fetch-procurement-file", {
           method: "POST",
@@ -160,7 +224,7 @@ export function PlanReader() {
         setPortalLoading(false);
       }
     },
-    [portalPdfCache]
+    [portalPdfCache, selectedProject, hydrateWorkspace]
   );
 
   useEffect(() => {
@@ -173,31 +237,44 @@ export function PlanReader() {
     });
   }, [selectedPortalFileId, projectFiles, loadPortalPdf]);
 
-  const onFile = useCallback(async (f: File | null) => {
-    setBanner(null);
-    manualPdfRef.current = true;
-    if (!f) return;
-    if (
-      f.type !== "application/pdf" &&
-      !f.name.toLowerCase().endsWith(".pdf")
-    ) {
-      setBanner(MSG.pdfOnly);
-      return;
-    }
-    if (f.size > MAX_BYTES) {
-      setBanner(MSG.tooLarge);
-      return;
-    }
-    setSelectedPortalFileId(null);
-    setFileLabel(f.name);
-    setRows([]);
-    try {
-      const b64 = await fileToBase64(f);
-      setPdfBase64(b64);
-    } catch {
-      setBanner(MSG.pdfOnly);
-    }
-  }, []);
+  useEffect(() => {
+    if (!hydrated || !fileKey || !selectedProject) return;
+    persistPlan(fileKey, selectedProject.id, rows, planType);
+  }, [rows, planType, fileKey, selectedProject, hydrated, persistPlan]);
+
+  const onFile = useCallback(
+    async (f: File | null) => {
+      setBanner(null);
+      manualPdfRef.current = true;
+      if (!f) return;
+      if (
+        f.type !== "application/pdf" &&
+        !f.name.toLowerCase().endsWith(".pdf")
+      ) {
+        setBanner(MSG.pdfOnly);
+        return;
+      }
+      if (f.size > MAX_BYTES) {
+        setBanner(MSG.tooLarge);
+        return;
+      }
+      setSelectedPortalFileId(null);
+      setFileLabel(f.name);
+      setRows([]);
+      try {
+        const b64 = await fileToBase64(f);
+        setPdfBase64(b64);
+        const key = selectedProject
+          ? makeFileKey(selectedProject.id, f.name)
+          : makeManualFileKey(f.name, shortContentHash(b64));
+        setFileKey(key);
+        await hydrateWorkspace(key);
+      } catch {
+        setBanner(MSG.pdfOnly);
+      }
+    },
+    [selectedProject, hydrateWorkspace]
+  );
 
   const extract = async () => {
     if (!pdfBase64) {
@@ -232,15 +309,7 @@ export function PlanReader() {
         setBanner(MSG.noQuantities);
         return;
       }
-      setRows(
-        list.map((r) => ({
-          ...r,
-          id:
-            typeof crypto !== "undefined" && crypto.randomUUID
-              ? crypto.randomUUID()
-              : `${r.item}-${r.quantity}-${Math.random()}`,
-        }))
-      );
+      setRows(withIds(list));
     } catch {
       setBanner(MSG.aiUnavailable);
     } finally {
@@ -272,7 +341,7 @@ export function PlanReader() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-surface-container-low">
-      <header className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
+      <header className="border-b border-outline-variant bg-surface-container-lowest px-margin-mobile py-4 md:px-margin-desktop">
         <h1 className="text-xl font-semibold tracking-tight text-primary md:text-2xl">
           Plan Takeoff
         </h1>
@@ -282,7 +351,7 @@ export function PlanReader() {
         </p>
       </header>
 
-      <div className="border-b border-outline-variant bg-white px-margin-mobile py-4 md:px-margin-desktop">
+      <div className="border-b border-outline-variant bg-surface-container-lowest px-margin-mobile py-4 md:px-margin-desktop">
         {banner ? (
           <div
             className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
@@ -302,7 +371,7 @@ export function PlanReader() {
               <select
                 value={selectedPortalFileId ?? ""}
                 onChange={(e) => onPortalSelect(e.target.value)}
-                className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 {projectFiles.map((f) => (
                   <option key={f.id} value={f.id}>
@@ -329,7 +398,7 @@ export function PlanReader() {
           <button
             type="button"
             onClick={pickFile}
-            className="inline-flex h-10 items-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-variant"
+            className="inline-flex h-10 items-center rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-primary shadow-sm hover:bg-surface-variant"
           >
             Upload plan PDF
           </button>
@@ -341,7 +410,7 @@ export function PlanReader() {
               onChange={(e) =>
                 setPlanType(e.target.value as (typeof PLAN_TYPES)[number])
               }
-              className="h-10 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               {PLAN_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -363,7 +432,8 @@ export function PlanReader() {
 
         {fileLabel ? (
           <p className="mt-3 text-xs text-on-surface-variant">
-            Active sheet: <span className="font-medium text-on-surface">{fileLabel}</span>
+            Active sheet:{" "}
+            <span className="font-medium text-on-surface">{fileLabel}</span>
           </p>
         ) : null}
         {portalLoading ? (
@@ -384,9 +454,10 @@ export function PlanReader() {
         </h2>
         <p className="mt-1 text-sm text-on-surface-variant">
           Edit quantities, then send SOV and plan lines to Estimate Draft.
+          Saved takeoffs restore automatically for this file.
         </p>
 
-        <div className="shadow-buildlens mt-4 overflow-hidden rounded-lg border border-outline-variant bg-white">
+        <div className="shadow-buildlens mt-4 overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-[1] border-b border-outline-variant bg-surface-container-low">
               <tr className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">

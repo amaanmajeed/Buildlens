@@ -28,6 +28,7 @@ import {
   Map,
   MapPin,
   MessageCircle,
+  Moon,
   Play,
   RefreshCw,
   ScrollText,
@@ -36,6 +37,7 @@ import {
   Settings,
   Share2,
   Sparkles,
+  Sun,
   Table2,
   ZoomIn,
   ZoomOut,
@@ -81,6 +83,8 @@ const MAP: Record<string, LucideIcon> = {
   archive: Archive,
   history: History,
   search: Search,
+  moon: Moon,
+  sun: Sun,
 };
 
 const PX = {

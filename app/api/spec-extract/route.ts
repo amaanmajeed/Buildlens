@@ -1,4 +1,5 @@
 import { generatePdfText } from "@/lib/gemini";
+import { generateWithFileSearch } from "@/lib/fileSearch";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
 import { parseGeminiModelId } from "@/lib/geminiModels";
 import { MSG } from "@/lib/messages";
@@ -20,12 +21,21 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const pdfBase64 = body?.pdfBase64 as string | undefined;
-    if (!pdfBase64 || typeof pdfBase64 !== "string") {
+    const storeName =
+      typeof body?.storeName === "string" ? body.storeName : undefined;
+    const fileKey =
+      typeof body?.fileKey === "string" ? body.fileKey : undefined;
+    const model = parseGeminiModelId(body?.model);
+
+    let raw: string;
+    if (storeName && fileKey) {
+      raw = await generateWithFileSearch(storeName, fileKey, SOV_PROMPT, model);
+    } else if (pdfBase64 && typeof pdfBase64 === "string") {
+      raw = await generatePdfText(pdfBase64, SOV_PROMPT, model);
+    } else {
       return Response.json({ error: "Invalid request." }, { status: 400 });
     }
 
-    const model = parseGeminiModelId(body?.model);
-    const raw = await generatePdfText(pdfBase64, SOV_PROMPT, model);
     let rows: SovRow[];
     try {
       rows = parseJsonArray<SovRow>(raw);
