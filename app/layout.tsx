@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { Providers } from "@/components/layout/Providers";
+import { ThemeSync } from "@/components/ThemeSync";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,39 +37,24 @@ export const metadata: Metadata = {
   },
 };
 
-const themeInitScript = `
-try {
-  const theme = localStorage.getItem('theme') ||
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const dark = theme === 'dark';
-  if (dark) document.documentElement.classList.add('dark');
-  const href = dark ? '/buildlens-icon-dark.png' : '/buildlens-icon-light.png';
-  let link = document.querySelector("link[rel='icon']");
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    document.head.appendChild(link);
-  }
-  link.type = 'image/png';
-  link.href = href;
-} catch (e) {}
-`;
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const theme = (await cookies()).get("theme")?.value;
+  const dark = theme === "dark";
+
   return (
     <html
       lang="en"
+      className={dark ? "dark" : undefined}
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
-      <body className="min-h-full flex flex-col bg-background text-on-surface">
+      <body
+        className={`${inter.variable} ${jetbrainsMono.variable} min-h-full flex h-full flex-col bg-background text-on-surface antialiased`}
+      >
+        <ThemeSync />
         <Providers>{children}</Providers>
       </body>
     </html>

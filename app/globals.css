@@ -2,6 +2,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ponytail: height on html via CSS so React className can't wipe script-applied .dark */
+html {
+  height: 100%;
+}
+
 :root {
   color-scheme: light;
   --background: #f4f7fa;

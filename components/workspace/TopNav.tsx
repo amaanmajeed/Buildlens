@@ -6,7 +6,7 @@ import { AI_MODEL_OPTIONS, parseAiModelId } from "@/lib/aiModels";
 import { Icon } from "@/components/ui/Icon";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 function setFavicon(dark: boolean) {
   const href = dark
@@ -49,10 +49,7 @@ export function TopNav() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { aiModel, setAiModel } = useAppState();
-  const [dark, setDark] = useState(() => {
-    if (typeof document === "undefined") return false;
-    return document.documentElement.classList.contains("dark");
-  });
+  const [dark, setDark] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
 
   const opportunitiesActive =
@@ -63,6 +60,16 @@ export function TopNav() {
     pathname === "/my-work" || pathname.startsWith("/my-work/");
   const settingsActive =
     pathname === "/settings" || pathname.startsWith("/settings/");
+
+  useLayoutEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark =
+      stored === "dark" ||
+      (stored !== "light" &&
+        document.documentElement.classList.contains("dark"));
+    document.documentElement.classList.toggle("dark", isDark);
+    setDark(isDark);
+  }, []);
 
   useEffect(() => {
     setFavicon(dark);
@@ -88,7 +95,9 @@ export function TopNav() {
   function toggleTheme() {
     const next = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    const theme = next ? "dark" : "light";
+    localStorage.setItem("theme", theme);
+    document.cookie = `theme=${theme};path=/;max-age=31536000;SameSite=Lax`;
     setDark(next);
   }
 
