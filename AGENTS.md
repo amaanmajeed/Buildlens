@@ -25,6 +25,7 @@ BuildLens AI is a Next.js 16 (App Router) construction bidding intelligence MVP.
 
 1. Run [`supabase/schema.sql`](supabase/schema.sql) (base tables).
 2. Run [`supabase/migrations/001_auth_per_user.sql`](supabase/migrations/001_auth_per_user.sql) (profiles, `user_id`, RLS, `user_projects`). **Truncates** existing workspace rows.
+3. Run [`supabase/migrations/002_portal_bids_cache.sql`](supabase/migrations/002_portal_bids_cache.sql) (shared open-bids cache).
 
 ### Env
 
@@ -37,7 +38,7 @@ See [`.env.example`](.env.example). Required for auth:
 
 ### Product surfaces
 
-- **Opportunities** — live portal scrape.
+- **Opportunities** — open bids from DB cache; Refresh re-scrapes OpenGov.
 - **My Work** — user's saved projects; open restores DB state without re-AI.
 - **Settings** — preferred model + encrypted OpenAI API key.
 - Workspace tables are scoped by `auth.uid()` (RLS).

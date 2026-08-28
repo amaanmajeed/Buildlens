@@ -12,26 +12,48 @@ export function OpportunitiesContent() {
   const router = useRouter();
   const { selectPortalProject } = useAppState();
   const [projects, setProjects] = useState<PortalProject[]>([]);
+  const [scrapedAt, setScrapedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const applyResponse = async (res: Response) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        typeof data.error === "string" ? data.error : "Failed to load projects"
+      );
+    }
+    setProjects(Array.isArray(data.projects) ? data.projects : []);
+    setScrapedAt(
+      typeof data.scrapedAt === "string" ? data.scrapedAt : null
+    );
+  };
 
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/scrape-projects");
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          typeof data.error === "string" ? data.error : "Failed to load projects"
-        );
-      }
-      setProjects(Array.isArray(data.projects) ? data.projects : []);
+      await applyResponse(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
       setProjects([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setError(null);
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/scrape-projects", { method: "POST" });
+      await applyResponse(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -53,19 +75,51 @@ export function OpportunitiesContent() {
 
   return (
     <section className="mx-auto max-w-container-max px-margin-mobile py-stack-xl md:px-margin-desktop">
-      <header className="mb-stack-lg">
-        <h1 className="text-2xl font-semibold tracking-tight text-primary md:text-3xl">
-          Orange County FL — open bids
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
-          Select a project to open Spec Analysis. Files load from the Orange
-          County procurement portal.
-        </p>
+      <header className="mb-stack-lg flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-primary md:text-3xl">
+            Orange County FL — open bids
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
+            Select a project to open Spec Analysis. Files load from the Orange
+            County procurement portal.
+            {scrapedAt ? (
+              <>
+                {" "}
+                Last refreshed{" "}
+                {new Date(scrapedAt).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+                .
+              </>
+            ) : null}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={loading || refreshing}
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-outline-variant px-4 text-sm font-medium text-primary disabled:opacity-50"
+        >
+          <Icon
+            name="refresh"
+            size="sm"
+            className={refreshing ? "animate-spin" : undefined}
+          />
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
       </header>
 
+      {error && projects.length > 0 ? (
+        <div className="mb-4 rounded-lg border border-error/30 bg-error-container/30 px-4 py-3 text-sm text-error">
+          {error}
+        </div>
+      ) : null}
+
       {loading ? (
-        <Spinner label="Loading projects from portal…" />
-      ) : error ? (
+        <Spinner label="Loading projects…" />
+      ) : error && projects.length === 0 ? (
         <div className="rounded-xl border border-error/30 bg-error-container/30 p-6 text-sm text-error">
           <p className="font-medium">{error}</p>
           <p className="mt-2 text-on-surface-variant">
