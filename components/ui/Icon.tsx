@@ -25,6 +25,7 @@ import {
   LineChart,
   Layers,
   ListFilter,
+  LogOut,
   Map,
   MapPin,
   MessageCircle,
@@ -85,6 +86,7 @@ const MAP: Record<string, LucideIcon> = {
   search: Search,
   moon: Moon,
   sun: Sun,
+  logout: LogOut,
 };
 
 const PX = {

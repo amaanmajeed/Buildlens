@@ -166,8 +166,9 @@ export function TopNav() {
         <button
           type="button"
           onClick={() => void signOut()}
-          className="hidden h-9 items-center rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface sm:inline-flex"
+          className="hidden h-9 items-center gap-1.5 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface sm:inline-flex"
         >
+          <Icon name="logout" size="sm" />
           Sign out
         </button>
       </div>
