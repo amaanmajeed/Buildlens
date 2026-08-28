@@ -1,6 +1,8 @@
-import { generatePdfText } from "@/lib/gemini";
-import { geminiErrorResponse } from "@/lib/geminiErrors";
-import { parseGeminiModelId } from "@/lib/geminiModels";
+import { generatePdfText } from "@/lib/openaiGenerate";
+import { openaiErrorResponse } from "@/lib/openaiErrors";
+import { parseAiModelId } from "@/lib/aiModels";
+import { isAuthError, requireUser } from "@/lib/auth";
+import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
 import { MSG } from "@/lib/messages";
 import { parseJsonArray } from "@/lib/parseJson";
 import type { PlanQuantityRow } from "@/lib/types";
@@ -39,6 +41,10 @@ Do not include any other text.`;
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const body = await request.json();
     const pdfBase64 = body?.pdfBase64 as string | undefined;
     const planType = body?.planType as string | undefined;
@@ -49,8 +55,14 @@ export async function POST(request: Request) {
     const pt =
       planType && PLAN_TYPES.has(planType) ? planType : "Other";
 
-    const model = parseGeminiModelId(body?.model);
-    const raw = await generatePdfText(pdfBase64, planPrompt(pt), model);
+    const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
+    const model = parseAiModelId(body?.model);
+    const raw = await generatePdfText(
+      openaiApiKey,
+      pdfBase64,
+      planPrompt(pt),
+      model
+    );
     let rows: PlanQuantityRow[];
     try {
       rows = parseJsonArray<PlanQuantityRow>(raw);
@@ -77,6 +89,6 @@ export async function POST(request: Request) {
 
     return Response.json({ quantities: normalized });
   } catch (e) {
-    return geminiErrorResponse(e, "api/plan-extract");
+    return openaiErrorResponse(e, "api/plan-extract");
   }
 }

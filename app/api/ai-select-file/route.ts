@@ -1,5 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { parseGeminiModelId } from "@/lib/geminiModels";
+import { generateText } from "@/lib/openaiGenerate";
+import { openaiErrorResponse } from "@/lib/openaiErrors";
+import { parseAiModelId } from "@/lib/aiModels";
+import { isAuthError, requireUser } from "@/lib/auth";
+import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
 import type { ProjectFile } from "@/lib/scraper";
 
 const PROMPT = `You are a construction estimating assistant. Given a list of files from a procurement project, select the SINGLE file most likely to contain the technical specifications or Schedule of Values (SOV) for construction bidding. Prefer PDFs with names suggesting specs, bid schedules, scope of work, or technical requirements.
@@ -12,6 +15,10 @@ Files:
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const body = await request.json();
     const files = body?.files as ProjectFile[] | undefined;
     const projectTitle = body?.projectTitle as string | undefined;
@@ -23,17 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const key =
-      process.env.GEMINI_API_KEY?.trim() ??
-      process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
-
-    if (!key) {
-      return Response.json(
-        { error: "GEMINI_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
     const fileList = files
       .map((f) => `- ID: ${f.id} | Name: ${f.name} | Type: ${f.type}`)
       .join("\n");
@@ -42,13 +38,13 @@ export async function POST(request: Request) {
       ? `\nProject: "${projectTitle}"\n`
       : "";
 
-    const genAI = new GoogleGenerativeAI(key);
-    const modelId = parseGeminiModelId(body?.model);
-    const model = genAI.getGenerativeModel({ model: modelId });
-    const result = await model.generateContent(
-      PROMPT + contextLine + fileList
+    const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
+    const model = parseAiModelId(body?.model);
+    const text = await generateText(
+      openaiApiKey,
+      PROMPT + contextLine + fileList,
+      model
     );
-    const text = result.response.text();
 
     const jsonMatch = text.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) {
@@ -68,8 +64,6 @@ export async function POST(request: Request) {
       reason: parsed.reason,
     });
   } catch (e) {
-    const message =
-      e instanceof Error ? e.message : "AI file selection failed";
-    return Response.json({ error: message }, { status: 500 });
+    return openaiErrorResponse(e, "api/ai-select-file");
   }
 }

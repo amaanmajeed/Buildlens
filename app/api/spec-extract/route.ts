@@ -1,7 +1,7 @@
-import { generatePdfText } from "@/lib/gemini";
+import { generatePdfText } from "@/lib/openaiGenerate";
 import { generateWithFileSearch } from "@/lib/fileSearch";
-import { geminiErrorResponse } from "@/lib/geminiErrors";
-import { parseGeminiModelId } from "@/lib/geminiModels";
+import { openaiErrorResponse } from "@/lib/openaiErrors";
+import { parseAiModelId } from "@/lib/aiModels";
 import { isAuthError, requireUser } from "@/lib/auth";
 import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
 import { MSG } from "@/lib/messages";
@@ -31,18 +31,20 @@ export async function POST(request: Request) {
       typeof body?.storeName === "string" ? body.storeName : undefined;
     const fileKey =
       typeof body?.fileKey === "string" ? body.fileKey : undefined;
+    const model = parseAiModelId(body?.model);
+    const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
+
     let raw: string;
     if (storeName && fileKey) {
-      const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
       raw = await generateWithFileSearch(
         openaiApiKey,
         storeName,
         fileKey,
-        SOV_PROMPT
+        SOV_PROMPT,
+        model
       );
     } else if (pdfBase64 && typeof pdfBase64 === "string") {
-      const model = parseGeminiModelId(body?.model);
-      raw = await generatePdfText(pdfBase64, SOV_PROMPT, model);
+      raw = await generatePdfText(openaiApiKey, pdfBase64, SOV_PROMPT, model);
     } else {
       return Response.json({ error: "Invalid request." }, { status: 400 });
     }
@@ -70,6 +72,6 @@ export async function POST(request: Request) {
 
     return Response.json({ schedule: normalized });
   } catch (e) {
-    return geminiErrorResponse(e, "api/spec-extract");
+    return openaiErrorResponse(e, "api/spec-extract");
   }
 }

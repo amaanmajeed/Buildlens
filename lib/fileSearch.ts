@@ -145,11 +145,12 @@ export async function generateWithFileSearch(
   openaiApiKey: string,
   storeName: string,
   fileKey: string,
-  textPrompt: string
+  textPrompt: string,
+  modelId: string = DEFAULT_AI_MODEL
 ): Promise<string> {
   const openai = new OpenAI({ apiKey: openaiApiKey });
   const response = await openai.responses.create({
-    model: DEFAULT_AI_MODEL,
+    model: modelId,
     input: textPrompt,
     tools: [
       {

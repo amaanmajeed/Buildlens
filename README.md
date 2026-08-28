@@ -5,7 +5,6 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 Create `.env` / `.env.local` with:
 
 ```bash
-GEMINI_API_KEY=your_key_from_google_ai_studio
 OPENAI_API_KEY=optional_bootstrap_only
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -14,7 +13,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 APP_ENCRYPTION_KEY=paste_output_of_openssl_rand_-base64_32
 ```
 
-Optional Gemini alias: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
+Prefer saving your OpenAI key in **Settings** (encrypted). `OPENAI_API_KEY` is only a local bootstrap when the profile has no key. Restart `npm run dev` after changes.
 
 ### Database setup
 
@@ -24,34 +23,23 @@ Optional Gemini alias: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` aft
 
 Generate encryption key: `openssl rand -base64 32`
 
-Spec RAG uses OpenAI vector stores + Responses `file_search` with the **per-user** OpenAI key from Settings. Gemini remains for PDF inline fallback and plan extract.
+All AI (spec RAG / File Search, PDF inline extract, plan extract, AI file pick) uses the **per-user** OpenAI key from Settings.
 
 ### Auth
 
 Unauthenticated users are redirected to `/login`. Sign up at `/signup`. Use **My Work** for saved bids and **Settings** for your OpenAI API key.
 
-## Gemini models
+## OpenAI models
 
-These API ids work with `@google/generative-ai` (`getGenerativeModel({ model })`). Defaults in code are `lib/gemini.ts` and `app/api/ai-select-file/route.ts`; swap the `MODEL` constant to rotate when testing or if a model hits quota.
-
-| Display name | Model id |
-| --- | --- |
-| Gemini 2.5 Flash         | `gemini-2.5-flash`         |
-| Gemini 2.5 Flash‑Lite    | `gemini-2.5-flash-lite`    |
-| Gemini 3 Flash           | `gemini-3-flash-preview`   |
-| Gemini 3.1 Flash         | `gemini-3.1-flash`         |
-| Gemini 3.1 Flash‑Lite    | `gemini-3.1-flash-lite`    |
-
-
-Confirm availability for your key in [Google AI Studio](https://aistudio.google.com); preview ids can change when models go stable.
+UI / server default is `gpt-4o-mini` (`lib/aiModels.ts`). Change preferred model in Settings or the top nav.
 
 ## Debugging AI errors
 
-The UI shows a plain-English `error` message. In **development**, failed API responses also include a `code` (e.g. `GEMINI_AUTH`, `GEMINI_PAYLOAD_LIMIT`) and a `debug` object with the upstream status and message—open DevTools → Network → select the failed `POST` → Response.
+The UI shows a plain-English `error` message. In **development**, failed API responses also include a `code` (e.g. `OPENAI_AUTH`, `OPENAI_PAYLOAD_LIMIT`) and a `debug` object with the upstream status and message—open DevTools → Network → select the failed `POST` → Response.
 
-Check the **terminal** where `npm run dev` runs: routes log `[api/spec-extract] Gemini error <code>` with the full error.
+Check the **terminal** where `npm run dev` runs: routes log `[api/spec-extract] OpenAI error <code>` with the full error.
 
-Common causes: wrong or expired API key (401), PDF too large for Gemini in one request (413), rate limits (429), model not enabled for the key (502), safety blocks (422).
+Common causes: wrong or expired API key (401), PDF too large for one request (413), rate limits (429), model not enabled for the key (502).
 
 ## Getting Started
 

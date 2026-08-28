@@ -1,7 +1,7 @@
-import { generatePdfText } from "@/lib/gemini";
+import { generatePdfText } from "@/lib/openaiGenerate";
 import { generateWithFileSearch } from "@/lib/fileSearch";
-import { geminiErrorResponse } from "@/lib/geminiErrors";
-import { parseGeminiModelId } from "@/lib/geminiModels";
+import { openaiErrorResponse } from "@/lib/openaiErrors";
+import { parseAiModelId } from "@/lib/aiModels";
 import { isAuthError, requireUser } from "@/lib/auth";
 import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
 import type { ChatTurn } from "@/lib/types";
@@ -47,25 +47,26 @@ export async function POST(request: Request) {
       Array.isArray(history) ? history : [],
       question.trim()
     );
+    const model = parseAiModelId(body?.model);
+    const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
 
     let answer: string;
     if (storeName && fileKey) {
-      const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
       answer = await generateWithFileSearch(
         openaiApiKey,
         storeName,
         fileKey,
-        prompt
+        prompt,
+        model
       );
     } else if (pdfBase64 && typeof pdfBase64 === "string") {
-      const model = parseGeminiModelId(body?.model);
-      answer = await generatePdfText(pdfBase64, prompt, model);
+      answer = await generatePdfText(openaiApiKey, pdfBase64, prompt, model);
     } else {
       return Response.json({ error: "Invalid request." }, { status: 400 });
     }
 
     return Response.json({ answer: answer.trim() });
   } catch (e) {
-    return geminiErrorResponse(e, "api/spec-chat");
+    return openaiErrorResponse(e, "api/spec-chat");
   }
 }

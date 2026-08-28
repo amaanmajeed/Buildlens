@@ -1,4 +1,4 @@
-/** Strip markdown code fences so JSON.parse succeeds on Gemini output */
+/** Strip markdown code fences so JSON.parse succeeds on model output */
 export function stripJsonFences(raw: string): string {
   let s = raw.trim();
   const fence = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/im;
