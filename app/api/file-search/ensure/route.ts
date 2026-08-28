@@ -1,15 +1,25 @@
 import { ensureIndexed } from "@/lib/fileSearch";
-import { makeFileKey, makeManualFileKey, shortContentHash } from "@/lib/fileKey";
-import { supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
+import {
+  makeFileKey,
+  makeManualFileKey,
+  shortContentHash,
+} from "@/lib/fileKey";
+import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
+import { supabasePublicConfigured } from "@/lib/supabaseEnv";
 
 export async function POST(request: Request) {
   try {
-    if (!supabaseConfigured()) {
+    if (!supabasePublicConfigured()) {
       return Response.json(
         { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
         { status: 500 }
       );
     }
+
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
 
     const body = await request.json();
     const fileName =
@@ -51,13 +61,17 @@ export async function POST(request: Request) {
       resolvedTitle = projectTitle || "Manual upload";
     }
 
-    const result = await ensureIndexed({
+    const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
+
+    const result = await ensureIndexed(supabase, {
       fileKey,
       projectId: resolvedProjectId,
       projectTitle: resolvedTitle,
       fileName,
       pdfBase64,
       displayName: fileName,
+      userId: user.id,
+      openaiApiKey,
     });
 
     return Response.json(result);
@@ -72,15 +86,22 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (msg === "missing_api_key") {
+    if (msg === "missing_openai_api_key") {
       return Response.json(
-        { error: "GEMINI_API_KEY is not set.", code: "MISSING_API_KEY" },
-        { status: 500 }
+        {
+          error:
+            "Add your OpenAI API key in Settings before indexing documents.",
+          code: "MISSING_USER_OPENAI_KEY",
+        },
+        { status: 400 }
       );
     }
-    if (msg === "missing_supabase") {
+    if (msg === "missing_encryption_key" || msg === "invalid_encryption_key") {
       return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
+        {
+          error: "Server encryption is not configured.",
+          code: "MISSING_ENCRYPTION_KEY",
+        },
         { status: 500 }
       );
     }

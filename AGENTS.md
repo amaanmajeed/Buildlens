@@ -4,15 +4,16 @@
 
 ### Project overview
 
-BuildLens AI is a Next.js 16 (App Router) construction bidding intelligence MVP. No Docker, no auth — UI state is React Context; durable File Search IDs + workspace data live in Supabase.
+BuildLens AI is a Next.js 16 (App Router) construction bidding intelligence MVP. Auth and durable workspace data live in Supabase; UI state is React Context plus per-user DB rows.
 
 ### Services
 
 | Service | How to run | Notes |
 |---------|-----------|-------|
-| Next.js dev server | `npm run dev` | Serves on http://localhost:3000 |
-| Google Gemini API | Set `GEMINI_API_KEY` in `.env.local` | Required for AI routes + File Search |
-| Supabase | Set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Persist File Search IDs, SOV, plan takeoff, estimate, chats |
+| Next.js dev server | `npm run dev` | http://localhost:3000 |
+| Supabase Auth | Email/password | Gate all app routes except `/login`, `/signup` |
+| OpenAI | Per-user key in Settings (encrypted) or optional `OPENAI_API_KEY` bootstrap | File Search + Spec when indexed |
+| Google Gemini | `GEMINI_API_KEY` | PDF inline fallback + plan extract + ai-select-file |
 
 ### Commands
 
@@ -20,23 +21,31 @@ BuildLens AI is a Next.js 16 (App Router) construction bidding intelligence MVP.
 - **Build:** `npm run build`
 - **Dev:** `npm run dev`
 
+### Schema
+
+1. Run [`supabase/schema.sql`](supabase/schema.sql) (base tables).
+2. Run [`supabase/migrations/001_auth_per_user.sql`](supabase/migrations/001_auth_per_user.sql) (profiles, `user_id`, RLS, `user_projects`). **Truncates** existing workspace rows.
+
+### Env
+
+See [`.env.example`](.env.example). Required for auth:
+
+- `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (rare admin only)
+- `APP_ENCRYPTION_KEY` (32-byte base64) for OpenAI key encryption
+- `GEMINI_API_KEY`; optional `OPENAI_API_KEY` only if user has not saved a key yet
+
+### Product surfaces
+
+- **Opportunities** — live portal scrape.
+- **My Work** — user's saved projects; open restores DB state without re-AI.
+- **Settings** — preferred model + encrypted OpenAI API key.
+- Workspace tables are scoped by `auth.uid()` (RLS).
+
 ### Non-obvious notes
 
-- The app works without `GEMINI_API_KEY` for non-AI pages (Opportunities, Estimate Draft UI). AI features need the key.
-- Without Supabase env vars, File Search ensure / workspace APIs return `MISSING_SUPABASE`. Spec/plan still work via PDF `inlineData` fallback when bytes are available.
-- Spec PDFs are uploaded **once** to a Gemini File Search store (`buildlens-specs`). Mapping `file_key = "{projectId}::{normalizedFileName}"` is stored in `file_search_docs`. Reopening skips re-chunking.
-- Workspace persistence: `workspace_snapshots` (SOV + plan takeoff + active chat), `estimate_drafts` (rows + unit prices per project), `file_chats` (multi-tab chat history per file).
-- Apply schema: run [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL editor.
-- Next.js 16 uses Turbopack by default in dev mode.
-- No test framework is configured — there are no automated test suites to run.
-- `.env.local` is gitignored; create it from `.env.example`.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+- Middleware blocks unauthenticated access to pages and `/api/*` (except `/api/auth/session`).
+- Auth session is an httpOnly cookie (`sb-buildlens-auth`); set via `POST /api/auth/session` after login/signup.
+- File Search ensure uses the **user's** OpenAI key (decrypted server-side).
+- Next.js 16 uses Turbopack by default in dev.
+- No automated test suite.

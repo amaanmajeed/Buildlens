@@ -1,16 +1,14 @@
-import { getSupabase, supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
 import type { ChatTurn } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, ctx: Ctx) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const { id } = await ctx.params;
     if (!id) {
       return Response.json({ error: "id is required." }, { status: 400 });
@@ -30,11 +28,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
       return Response.json({ error: "Nothing to update." }, { status: 400 });
     }
 
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("file_chats")
       .update(patch)
       .eq("id", id)
+      .eq("user_id", user.id)
       .select("*")
       .single();
     if (error) throw error;
@@ -56,19 +54,20 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
 export async function DELETE(_request: Request, ctx: Ctx) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const { id } = await ctx.params;
     if (!id) {
       return Response.json({ error: "id is required." }, { status: 400 });
     }
 
-    const sb = getSupabase();
-    const { error } = await sb.from("file_chats").delete().eq("id", id);
+    const { error } = await supabase
+      .from("file_chats")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (error) throw error;
 
     return Response.json({ ok: true });

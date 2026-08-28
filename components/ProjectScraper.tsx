@@ -55,13 +55,13 @@ export function ProjectScraper({
     projectFiles,
     portalPdfCache,
     setPortalPdfCache,
-    geminiModel,
+    aiModel,
   } = useAppState();
 
-  const geminiModelRef = useRef(geminiModel);
+  const aiModelRef = useRef(aiModel);
   useEffect(() => {
-    geminiModelRef.current = geminiModel;
-  }, [geminiModel]);
+    aiModelRef.current = aiModel;
+  }, [aiModel]);
 
   const [step, setStep] = useState<Step>("idle");
   const [projects, setProjects] = useState<PortalProject[]>([]);
@@ -138,6 +138,14 @@ export function ProjectScraper({
 
         setProjectFiles(list);
 
+        if (project) {
+          void fetch("/api/my-work", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project, files: list }),
+          });
+        }
+
         if (list.length === 0) {
           setError(
             "No files found for this project. Try another project or upload a PDF below."
@@ -162,7 +170,7 @@ export function ProjectScraper({
           body: JSON.stringify({
             files: list,
             projectTitle: project.title,
-            model: geminiModelRef.current,
+            model: aiModelRef.current,
           }),
         });
         const aiData = await aiRes.json();
@@ -245,7 +253,7 @@ export function ProjectScraper({
       setProcessMsg("Checking indexed document…");
 
       try {
-        // Reuse Gemini File Search ID when we already indexed this file.
+        // Reuse OpenAI vector-store index when we already indexed this file.
         const ensureRes = await fetch("/api/file-search/ensure", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

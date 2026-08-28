@@ -43,6 +43,11 @@ export function OpportunitiesContent() {
 
   const openProject = (p: PortalProject) => {
     selectPortalProject(p);
+    void fetch("/api/my-work", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: p, files: [] }),
+    });
     router.push("/spec-analysis");
   };
 

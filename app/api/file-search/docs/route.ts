@@ -1,14 +1,19 @@
 import { listFileSearchDocs } from "@/lib/fileSearch";
-import { supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
+import { supabasePublicConfigured } from "@/lib/supabaseEnv";
 
 export async function GET(request: Request) {
   try {
-    if (!supabaseConfigured()) {
+    if (!supabasePublicConfigured()) {
       return Response.json(
         { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
         { status: 500 }
       );
     }
+
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
 
     const { searchParams } = new URL(request.url);
     const projectIdRaw = searchParams.get("projectId");
@@ -20,7 +25,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const docs = await listFileSearchDocs(projectId);
+    const docs = await listFileSearchDocs(supabase, user.id, projectId);
     return Response.json({
       docs: docs.map((d) => ({
         fileKey: d.file_key,

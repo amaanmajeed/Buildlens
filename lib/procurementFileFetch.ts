@@ -1,4 +1,5 @@
 import { MSG } from "@/lib/messages";
+import { openGovHeader, openGovHttpFollow } from "@/lib/openGovHttp";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -41,28 +42,26 @@ export async function downloadProcurementFile(url: string): Promise<{
   if (!isAllowedProcurementFileUrl(url)) {
     throw new Error("URL not allowed.");
   }
-  const res = await fetch(url, {
-    redirect: "follow",
+  const res = await openGovHttpFollow(url, {
     headers: { "User-Agent": OPENGOV_UA, Accept: "*/*" },
   });
-  if (!res.ok) {
+  if (res.status < 200 || res.status >= 300) {
     throw new Error(`Download failed (${res.status}).`);
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.byteLength > MAX_BYTES) {
+  if (res.body.byteLength > MAX_BYTES) {
     throw new Error(MSG.tooLarge);
   }
   const fromHeader = fileNameFromContentDisposition(
-    res.headers.get("content-disposition")
+    openGovHeader(res.headers, "content-disposition")
   );
   const fromUrl = decodeURIComponent(
     url.split("/").pop()?.split("?")[0] ?? "document"
   );
   const fileName = fromHeader || fromUrl || "document";
   const contentType =
-    res.headers.get("content-type") ?? "application/octet-stream";
+    openGovHeader(res.headers, "content-type") ?? "application/octet-stream";
   return {
-    base64: buf.toString("base64"),
+    base64: res.body.toString("base64"),
     fileName,
     contentType,
   };

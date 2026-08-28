@@ -1,4 +1,4 @@
-import { getSupabase, supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
 import type { ChatTurn } from "@/lib/types";
 
 export type FileChatRow = {
@@ -13,21 +13,19 @@ export type FileChatRow = {
 
 export async function GET(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const fileKey = new URL(request.url).searchParams.get("fileKey")?.trim();
     if (!fileKey) {
       return Response.json({ error: "fileKey is required." }, { status: 400 });
     }
 
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("file_chats")
       .select("*")
+      .eq("user_id", user.id)
       .eq("file_key", fileKey)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
@@ -50,12 +48,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
 
     const body = await request.json();
     const fileKey =
@@ -64,10 +59,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "fileKey is required." }, { status: 400 });
     }
 
-    const sb = getSupabase();
-    const { data: existing } = await sb
+    const { data: existing } = await supabase
       .from("file_chats")
       .select("sort_order")
+      .eq("user_id", user.id)
       .eq("file_key", fileKey)
       .order("sort_order", { ascending: false })
       .limit(1);
@@ -81,9 +76,10 @@ export async function POST(request: Request) {
         ? body.title.trim()
         : `Chat ${nextOrder + 1}`;
 
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("file_chats")
       .insert({
+        user_id: user.id,
         file_key: fileKey,
         title,
         messages: [],

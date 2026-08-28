@@ -14,14 +14,14 @@ import {
 import { useRouter } from "next/navigation";
 import type { PortalProject, ProjectFile } from "@/lib/scraper";
 import type { EstimateRow, SovRow } from "@/lib/types";
-import type { GeminiModelId } from "@/lib/geminiModels";
-import { DEFAULT_GEMINI_MODEL, parseGeminiModelId } from "@/lib/geminiModels";
+import type { AiModelId } from "@/lib/aiModels";
+import { DEFAULT_AI_MODEL, parseAiModelId } from "@/lib/aiModels";
 
 const STORAGE_PROJECT = "buildlens:portalProject";
 const STORAGE_FILES = "buildlens:projectFiles";
 const STORAGE_SOV = "buildlens:sovSchedule";
 const STORAGE_SPEC_FILE_ID = "buildlens:specSourceFileId";
-const STORAGE_GEMINI_MODEL = "buildlens:geminiModel";
+const STORAGE_AI_MODEL = "buildlens:aiModel";
 
 export type PortalPdfCacheState = {
   fileId: string;
@@ -61,8 +61,8 @@ export type AppStateCtx = {
   setPortalPdfCache: React.Dispatch<
     React.SetStateAction<PortalPdfCacheState>
   >;
-  geminiModel: GeminiModelId;
-  setGeminiModel: React.Dispatch<React.SetStateAction<GeminiModelId>>;
+  aiModel: AiModelId;
+  setAiModel: React.Dispatch<React.SetStateAction<AiModelId>>;
 };
 
 const Ctx = createContext<AppStateCtx | null>(null);
@@ -90,9 +90,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [portalPdfCache, setPortalPdfCache] =
     useState<PortalPdfCacheState>(null);
   const [estimateRows, setEstimateRows] = useState<EstimateRow[]>([]);
-  const [geminiModel, setGeminiModel] = useState<GeminiModelId>(
-    DEFAULT_GEMINI_MODEL
-  );
+  const [aiModel, setAiModel] = useState<AiModelId>(DEFAULT_AI_MODEL);
   const [estimateHydrated, setEstimateHydrated] = useState(false);
   const estimateSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -101,13 +99,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const files = readStoredJson<ProjectFile[]>(STORAGE_FILES);
     const sov = readStoredJson<SovRow[]>(STORAGE_SOV);
     const specId = readStoredJson<string>(STORAGE_SPEC_FILE_ID);
-    const storedModel = readStoredJson<string>(STORAGE_GEMINI_MODEL);
+    const storedModel = readStoredJson<string>(STORAGE_AI_MODEL);
     startTransition(() => {
       if (p) setSelectedProject(p);
       if (files?.length) setProjectFiles(files);
       if (sov?.length) setSovSchedule(sov);
       if (typeof specId === "string") setSpecSourceFileId(specId);
-      setGeminiModel(parseGeminiModelId(storedModel));
+      setAiModel(parseAiModelId(storedModel));
       setHydrated(true);
     });
   }, []);
@@ -226,11 +224,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
     try {
-      sessionStorage.setItem(STORAGE_GEMINI_MODEL, JSON.stringify(geminiModel));
+      sessionStorage.setItem(STORAGE_AI_MODEL, JSON.stringify(aiModel));
     } catch {
       /* ignore quota */
     }
-  }, [geminiModel, hydrated]);
+  }, [aiModel, hydrated]);
 
   const selectPortalProject = useCallback((p: PortalProject | null) => {
     setSelectedProject(p);
@@ -296,8 +294,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       sendToEstimateDraft,
       portalPdfCache,
       setPortalPdfCache,
-      geminiModel,
-      setGeminiModel,
+      aiModel,
+      setAiModel,
     }),
     [
       selectedProject,
@@ -309,7 +307,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       appendFromPlan,
       sendToEstimateDraft,
       portalPdfCache,
-      geminiModel,
+      aiModel,
     ]
   );
 

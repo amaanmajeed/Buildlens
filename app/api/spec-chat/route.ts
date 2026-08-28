@@ -2,6 +2,8 @@ import { generatePdfText } from "@/lib/gemini";
 import { generateWithFileSearch } from "@/lib/fileSearch";
 import { geminiErrorResponse } from "@/lib/geminiErrors";
 import { parseGeminiModelId } from "@/lib/geminiModels";
+import { isAuthError, requireUser } from "@/lib/auth";
+import { resolveOpenAiApiKey } from "@/lib/userOpenAiKey";
 import type { ChatTurn } from "@/lib/types";
 
 function buildChatPrompt(history: ChatTurn[], question: string): string {
@@ -24,6 +26,10 @@ Question: ${question}`;
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const body = await request.json();
     const pdfBase64 = body?.pdfBase64 as string | undefined;
     const storeName =
@@ -41,12 +47,18 @@ export async function POST(request: Request) {
       Array.isArray(history) ? history : [],
       question.trim()
     );
-    const model = parseGeminiModelId(body?.model);
 
     let answer: string;
     if (storeName && fileKey) {
-      answer = await generateWithFileSearch(storeName, fileKey, prompt, model);
+      const openaiApiKey = await resolveOpenAiApiKey(supabase, user.id);
+      answer = await generateWithFileSearch(
+        openaiApiKey,
+        storeName,
+        fileKey,
+        prompt
+      );
     } else if (pdfBase64 && typeof pdfBase64 === "string") {
+      const model = parseGeminiModelId(body?.model);
       answer = await generatePdfText(pdfBase64, prompt, model);
     } else {
       return Response.json({ error: "Invalid request." }, { status: 400 });

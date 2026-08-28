@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { useAppState } from "@/components/workspace/AppStateProvider";
 
 const items = [
   { href: "/spec-analysis", icon: "analytics", label: "Spec Analysis" },
@@ -12,6 +13,7 @@ const items = [
 
 export function SideNav() {
   const pathname = usePathname() ?? "";
+  const { selectedProject } = useAppState();
 
   return (
     <aside className="fixed left-0 top-16 z-40 hidden h-[calc(100vh-4rem)] w-64 flex-col gap-stack-md overflow-y-auto border-r border-outline-variant bg-surface-container-low p-4 md:flex">
@@ -21,10 +23,10 @@ export function SideNav() {
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold leading-tight tracking-tight text-primary">
-            Project Alpha
+            {selectedProject?.title ?? "No project"}
           </h2>
           <p className="mt-1 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-on-surface-variant">
-            Terminal Expansion
+            {selectedProject?.financialId ?? "Select from Opportunities"}
           </p>
         </div>
       </div>
@@ -46,7 +48,9 @@ export function SideNav() {
                 name={icon}
                 size="md"
                 className={
-                  active ? "text-on-secondary-container" : "text-on-surface-variant"
+                  active
+                    ? "text-on-secondary-container"
+                    : "text-on-surface-variant"
                 }
               />
               <span className="leading-snug">{label}</span>

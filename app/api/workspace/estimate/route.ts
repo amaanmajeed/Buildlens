@@ -1,14 +1,12 @@
-import { getSupabase, supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
 import type { EstimateRow } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const projectIdRaw = new URL(request.url).searchParams.get("projectId");
     const projectId = projectIdRaw ? Number(projectIdRaw) : NaN;
     if (!Number.isFinite(projectId)) {
@@ -18,10 +16,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("estimate_drafts")
       .select("*")
+      .eq("user_id", user.id)
       .eq("project_id", projectId)
       .maybeSingle();
     if (error) throw error;
@@ -39,12 +37,9 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
 
     const body = await request.json();
     const projectId =
@@ -65,18 +60,18 @@ export async function PUT(request: Request) {
     }
 
     const rows = body.estimateRows as EstimateRow[];
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("estimate_drafts")
       .upsert(
         {
+          user_id: user.id,
           project_id: projectId,
           project_title:
             typeof body?.projectTitle === "string" ? body.projectTitle : null,
           estimate_rows: rows,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "project_id" }
+        { onConflict: "user_id,project_id" }
       )
       .select("*")
       .single();

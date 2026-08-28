@@ -1,3 +1,5 @@
+import { openGovHeader, openGovHttp } from "@/lib/openGovHttp";
+
 const EMBED_URL =
   "https://procurement.opengov.com/portal/embed/orangecountyfl/project-list";
 
@@ -38,7 +40,7 @@ export async function fetchTopProjects(
 ): Promise<PortalProject[]> {
   const url = `${EMBED_URL}?departmentId=all&status=open&page=1&limit=${limit}&sortField=proposalDeadline&sortDirection=DESC`;
 
-  const res = await fetch(url, {
+  const res = await openGovHttp(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -46,12 +48,11 @@ export async function fetchTopProjects(
     },
   });
 
-  if (!res.ok) {
+  if (res.status < 200 || res.status >= 300) {
     throw new Error(`Portal returned ${res.status}`);
   }
 
-  const html = await res.text();
-  return parseProjectsFromHtml(html);
+  return parseProjectsFromHtml(res.body.toString("utf8"));
 }
 
 function parseProjectsFromHtml(html: string): PortalProject[] {
@@ -113,13 +114,12 @@ async function resolveOpenGovDownloadUrl(url: string): Promise<string> {
     return url;
   }
   try {
-    const res = await fetch(url, {
+    const res = await openGovHttp(url, {
       method: "HEAD",
-      redirect: "manual",
       headers: OPENGOV_FETCH_HEADERS,
     });
     if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get("location");
+      const loc = openGovHeader(res.headers, "location");
       if (loc) return loc;
     }
   } catch {
@@ -168,15 +168,15 @@ function collectAttachmentsFromProjectJson(
 
 async function fetchProjectFilesFromApi(projectId: number): Promise<ProjectFile[]> {
   try {
-    const res = await fetch(`${OPENGOV_PROJECT_API}/${projectId}`, {
+    const res = await openGovHttp(`${OPENGOV_PROJECT_API}/${projectId}`, {
       headers: {
         ...OPENGOV_FETCH_HEADERS,
         Accept: "application/json",
       },
     });
-    if (!res.ok) return [];
+    if (res.status < 200 || res.status >= 300) return [];
 
-    const payload = (await res.json()) as unknown;
+    const payload = JSON.parse(res.body.toString("utf8")) as unknown;
     const raw = collectAttachmentsFromProjectJson(payload);
     const seenIds = new Set<number>();
     const seenUrls = new Set<string>();
@@ -228,16 +228,18 @@ export async function fetchProjectFiles(
 
   const url = `https://procurement.opengov.com/portal/embed/orangecountyfl/projects/${projectId}`;
   try {
-    const res = await fetch(url, {
+    const res = await openGovHttp(url, {
       headers: {
         ...OPENGOV_FETCH_HEADERS,
         Accept: "text/html,application/xhtml+xml",
       },
     });
 
-    if (res.ok) {
-      const html = await res.text();
-      const parsed = parseFilesFromHtml(html, projectId);
+    if (res.status >= 200 && res.status < 300) {
+      const parsed = parseFilesFromHtml(
+        res.body.toString("utf8"),
+        projectId
+      );
       files.push(...parsed);
     }
   } catch {

@@ -1,23 +1,21 @@
-import { getSupabase, supabaseConfigured } from "@/lib/supabase";
+import { isAuthError, requireUser } from "@/lib/auth";
 import type { PlanQuantityRow, SovRow } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
+
     const fileKey = new URL(request.url).searchParams.get("fileKey")?.trim();
     if (!fileKey) {
       return Response.json({ error: "fileKey is required." }, { status: 400 });
     }
 
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("workspace_snapshots")
       .select("*")
+      .eq("user_id", user.id)
       .eq("file_key", fileKey)
       .maybeSingle();
     if (error) throw error;
@@ -48,12 +46,9 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    if (!supabaseConfigured()) {
-      return Response.json(
-        { error: "Supabase is not configured.", code: "MISSING_SUPABASE" },
-        { status: 500 }
-      );
-    }
+    const auth = await requireUser();
+    if (isAuthError(auth)) return auth;
+    const { supabase, user } = auth;
 
     const body = await request.json();
     const fileKey =
@@ -70,6 +65,7 @@ export async function PUT(request: Request) {
     }
 
     const patch: Record<string, unknown> = {
+      user_id: user.id,
       file_key: fileKey,
       project_id: projectId,
       updated_at: new Date().toISOString(),
@@ -91,10 +87,9 @@ export async function PUT(request: Request) {
       patch.active_chat_id = body.activeChatId;
     }
 
-    const sb = getSupabase();
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from("workspace_snapshots")
-      .upsert(patch, { onConflict: "file_key" })
+      .upsert(patch, { onConflict: "user_id,file_key" })
       .select("*")
       .single();
     if (error) throw error;

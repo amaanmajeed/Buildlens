@@ -2,17 +2,33 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Environment
 
-Create `.env.local` in this folder with:
+Create `.env` / `.env.local` with:
 
 ```bash
 GEMINI_API_KEY=your_key_from_google_ai_studio
+OPENAI_API_KEY=optional_bootstrap_only
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+APP_ENCRYPTION_KEY=paste_output_of_openssl_rand_-base64_32
 ```
 
-Optional equivalent for Gemini: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
+Optional Gemini alias: `GOOGLE_GENERATIVE_AI_API_KEY`. Restart `npm run dev` after changes.
 
-Apply the SQL in `supabase/schema.sql` in the Supabase SQL editor (File Search IDs, workspace snapshots, estimate drafts, multi-tab chats).
+### Database setup
+
+1. Run `supabase/schema.sql` in the SQL editor.
+2. Run `supabase/migrations/001_auth_per_user.sql` (adds auth profiles, `user_id`, RLS, My Work). This **truncates** existing workspace rows.
+3. In Supabase Auth: enable Email provider; confirm email can be disabled for local MVP.
+
+Generate encryption key: `openssl rand -base64 32`
+
+Spec RAG uses OpenAI vector stores + Responses `file_search` with the **per-user** OpenAI key from Settings. Gemini remains for PDF inline fallback and plan extract.
+
+### Auth
+
+Unauthenticated users are redirected to `/login`. Sign up at `/signup`. Use **My Work** for saved bids and **Settings** for your OpenAI API key.
 
 ## Gemini models
 

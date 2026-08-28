@@ -19,13 +19,37 @@ export const metadata: Metadata = {
   title: "BuildLens AI",
   description:
     "Construction specification reader, plan takeoff, and estimate draft demo.",
+  icons: {
+    icon: [
+      {
+        url: "/buildlens-icon-light.png",
+        type: "image/png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/buildlens-icon-dark.png",
+        type: "image/png",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+  },
 };
 
 const themeInitScript = `
 try {
   const theme = localStorage.getItem('theme') ||
     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  if (theme === 'dark') document.documentElement.classList.add('dark');
+  const dark = theme === 'dark';
+  if (dark) document.documentElement.classList.add('dark');
+  const href = dark ? '/buildlens-icon-dark.png' : '/buildlens-icon-light.png';
+  let link = document.querySelector("link[rel='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.type = 'image/png';
+  link.href = href;
 } catch (e) {}
 `;
 

@@ -8,6 +8,8 @@ export const MSG = {
     "No quantities could be extracted from this drawing. You can add items manually below.",
   missingApiKey:
     "Server missing a Gemini API key. Set GEMINI_API_KEY in .env.local, then restart the dev server.",
+  missingOpenaiApiKey:
+    "Server missing an OpenAI API key. Set OPENAI_API_KEY in .env.local, then restart the dev server.",
   modelEmptyResponse:
     "The model returned no text. The PDF may be empty, encrypted, image-only without readable text, or too large for a single request. Try a smaller PDF.",
   geminiAuth:

@@ -39,6 +39,14 @@ export function classifyGeminiError(err: unknown): ClassifiedGeminiError {
     };
   }
 
+  if (err instanceof Error && err.message === "missing_openai_api_key") {
+    return {
+      httpStatus: 500,
+      code: "MISSING_API_KEY",
+      userMessage: MSG.missingOpenaiApiKey,
+    };
+  }
+
   if (err instanceof Error && err.message === "empty_response") {
     return {
       httpStatus: 422,

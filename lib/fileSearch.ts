@@ -1,8 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
-import { DEFAULT_GEMINI_MODEL, parseGeminiModelId } from "@/lib/geminiModels";
-import { getSupabase } from "@/lib/supabase";
+import OpenAI, { toFile } from "openai";
+import { DEFAULT_AI_MODEL } from "@/lib/aiModels";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const STORE_DISPLAY_NAME = "buildlens-specs";
+const STORE_NAME = "buildlens-specs";
 
 export type FileSearchDocRow = {
   id: string;
@@ -13,72 +13,30 @@ export type FileSearchDocRow = {
   store_name: string;
   document_name: string | null;
   display_name: string | null;
+  user_id?: string;
 };
 
-function getApiKey(): string {
-  const key = (
-    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  )?.trim();
-  if (!key) throw new Error("missing_api_key");
-  return key;
+function isOpenAiStore(storeName: string): boolean {
+  return storeName.startsWith("vs_");
 }
 
-function getAi(): GoogleGenAI {
-  return new GoogleGenAI({ apiKey: getApiKey() });
-}
-
-async function resolveStoreName(ai: GoogleGenAI): Promise<string> {
-  const pager = await ai.fileSearchStores.list({ config: { pageSize: 20 } });
-  for await (const store of pager) {
-    if (store.displayName === STORE_DISPLAY_NAME && store.name) {
-      return store.name;
-    }
+async function resolveVectorStoreId(openai: OpenAI): Promise<string> {
+  for await (const store of openai.vectorStores.list({ limit: 100 })) {
+    if (store.name === STORE_NAME) return store.id;
   }
-  const created = await ai.fileSearchStores.create({
-    config: { displayName: STORE_DISPLAY_NAME },
-  });
-  if (!created.name) throw new Error("file_search_store_create_failed");
-  return created.name;
-}
-
-function pdfBase64ToBlob(pdfBase64: string): Blob {
-  const buf = Buffer.from(pdfBase64, "base64");
-  return new Blob([new Uint8Array(buf)], { type: "application/pdf" });
-}
-
-async function pollUpload(
-  ai: GoogleGenAI,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK Operation type
-  operation: any
-): Promise<{ documentName?: string }> {
-  let op = operation;
-  for (let i = 0; i < 120; i++) {
-    if (op.done) {
-      if (op.error) {
-        throw new Error(
-          `file_search_upload_failed: ${JSON.stringify(op.error)}`
-        );
-      }
-      return {
-        documentName:
-          typeof op.response?.documentName === "string"
-            ? op.response.documentName
-            : undefined,
-      };
-    }
-    await new Promise((r) => setTimeout(r, 2000));
-    op = await ai.operations.get({ operation: op });
-  }
-  throw new Error("file_search_upload_timeout");
+  const created = await openai.vectorStores.create({ name: STORE_NAME });
+  return created.id;
 }
 
 export async function lookupFileSearchDoc(
+  sb: SupabaseClient,
+  userId: string,
   fileKey: string
 ): Promise<FileSearchDocRow | null> {
-  const sb = getSupabase();
   const { data, error } = await sb
     .from("file_search_docs")
     .select("*")
+    .eq("user_id", userId)
     .eq("file_key", fileKey)
     .maybeSingle();
   if (error) throw error;
@@ -86,16 +44,20 @@ export async function lookupFileSearchDoc(
 }
 
 export async function listFileSearchDocs(
+  sb: SupabaseClient,
+  userId: string,
   projectId: number
 ): Promise<FileSearchDocRow[]> {
-  const sb = getSupabase();
   const { data, error } = await sb
     .from("file_search_docs")
     .select("*")
+    .eq("user_id", userId)
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as FileSearchDocRow[];
+  return ((data ?? []) as FileSearchDocRow[]).filter((d) =>
+    isOpenAiStore(d.store_name)
+  );
 }
 
 export type EnsureIndexedInput = {
@@ -105,6 +67,8 @@ export type EnsureIndexedInput = {
   fileName: string;
   pdfBase64?: string;
   displayName?: string;
+  userId: string;
+  openaiApiKey: string;
 };
 
 export type EnsureIndexedResult = {
@@ -115,10 +79,11 @@ export type EnsureIndexedResult = {
 };
 
 export async function ensureIndexed(
+  sb: SupabaseClient,
   input: EnsureIndexedInput
 ): Promise<EnsureIndexedResult> {
-  const existing = await lookupFileSearchDoc(input.fileKey);
-  if (existing) {
+  const existing = await lookupFileSearchDoc(sb, input.userId, input.fileKey);
+  if (existing && isOpenAiStore(existing.store_name)) {
     return {
       storeName: existing.store_name,
       documentName: existing.document_name,
@@ -131,72 +96,74 @@ export async function ensureIndexed(
     throw new Error("pdf_required_for_first_index");
   }
 
-  const ai = getAi();
-  const storeName = await resolveStoreName(ai);
+  const openai = new OpenAI({ apiKey: input.openaiApiKey });
+  const storeName = await resolveVectorStoreId(openai);
   const displayName = input.displayName ?? input.fileName;
+  const buf = Buffer.from(input.pdfBase64, "base64");
 
-  const operation = await ai.fileSearchStores.uploadToFileSearchStore({
-    fileSearchStoreName: storeName,
-    file: pdfBase64ToBlob(input.pdfBase64),
-    config: {
-      mimeType: "application/pdf",
-      displayName,
-      customMetadata: [{ key: "file_key", stringValue: input.fileKey }],
-    },
+  const uploaded = await openai.files.create({
+    file: await toFile(buf, displayName, { type: "application/pdf" }),
+    purpose: "assistants",
   });
 
-  const finished = await pollUpload(ai, operation);
-  const documentName = finished.documentName ?? null;
+  const vsFile = await openai.vectorStores.files.createAndPoll(storeName, {
+    file_id: uploaded.id,
+    attributes: { file_key: input.fileKey },
+  });
 
-  const sb = getSupabase();
+  if (vsFile.status === "failed") {
+    throw new Error(
+      `file_search_upload_failed: ${JSON.stringify(vsFile.last_error)}`
+    );
+  }
+
   const { error } = await sb.from("file_search_docs").upsert(
     {
+      user_id: input.userId,
       file_key: input.fileKey,
       project_id: input.projectId,
       project_title: input.projectTitle,
       file_name: input.fileName,
       store_name: storeName,
-      document_name: documentName,
+      document_name: uploaded.id,
       display_name: displayName,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "file_key" }
+    { onConflict: "user_id,file_key" }
   );
   if (error) throw error;
 
   return {
     storeName,
-    documentName,
+    documentName: uploaded.id,
     fileKey: input.fileKey,
     reused: false,
   };
 }
 
 export async function generateWithFileSearch(
+  openaiApiKey: string,
   storeName: string,
   fileKey: string,
-  textPrompt: string,
-  modelId: unknown = DEFAULT_GEMINI_MODEL
+  textPrompt: string
 ): Promise<string> {
-  const ai = getAi();
-  const model = parseGeminiModelId(modelId);
-  // Escape double quotes in file_key for the filter expression
-  const safeKey = fileKey.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const response = await ai.models.generateContent({
-    model,
-    contents: textPrompt,
-    config: {
-      tools: [
-        {
-          fileSearch: {
-            fileSearchStoreNames: [storeName],
-            metadataFilter: `file_key="${safeKey}"`,
-          },
+  const openai = new OpenAI({ apiKey: openaiApiKey });
+  const response = await openai.responses.create({
+    model: DEFAULT_AI_MODEL,
+    input: textPrompt,
+    tools: [
+      {
+        type: "file_search",
+        vector_store_ids: [storeName],
+        filters: {
+          type: "eq",
+          key: "file_key",
+          value: fileKey,
         },
-      ],
-    },
+      },
+    ],
   });
-  const out = response.text;
+  const out = response.output_text;
   if (!out?.trim()) throw new Error("empty_response");
   return out;
 }

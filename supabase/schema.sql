@@ -1,5 +1,7 @@
--- BuildLens: File Search IDs + workspace persistence
+-- BuildLens: OpenAI File Search IDs + workspace persistence
 -- Run in the Supabase SQL editor.
+-- file_search_docs.store_name = OpenAI vector store id (vs_…)
+-- file_search_docs.document_name = OpenAI file id (file-…)
 
 create extension if not exists "pgcrypto";
 

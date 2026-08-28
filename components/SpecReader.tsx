@@ -30,7 +30,7 @@ export function SpecReader() {
     setSovSchedule,
     setSpecSourceFileId,
     setPortalPdfCache,
-    geminiModel,
+    aiModel,
   } = useAppState();
   const inputRef = useRef<HTMLInputElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -140,7 +140,7 @@ export function SpecReader() {
       fileKey?: string | null;
       pdfBase64?: string | null;
     }) => {
-      const body: Record<string, unknown> = { model: geminiModel };
+      const body: Record<string, unknown> = { model: aiModel };
       if (opts.storeName && opts.fileKey) {
         body.storeName = opts.storeName;
         body.fileKey = opts.fileKey;
@@ -174,7 +174,7 @@ export function SpecReader() {
       setSovReady(true);
       return true;
     },
-    [setSovSchedule, geminiModel]
+    [setSovSchedule, aiModel]
   );
 
   const onScrapedFileReady = useCallback(
@@ -431,7 +431,7 @@ export function SpecReader() {
       const body: Record<string, unknown> = {
         question: q,
         history: messages,
-        model: geminiModel,
+        model: aiModel,
       };
       if (storeName && fileKey) {
         body.storeName = storeName;
